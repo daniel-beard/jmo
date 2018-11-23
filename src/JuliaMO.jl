@@ -1,5 +1,5 @@
 
-module JuliaMOx
+module JuliaMO
 
 include("constants.jl")
 include("types.jl")
