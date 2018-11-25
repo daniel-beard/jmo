@@ -1,4 +1,4 @@
-name = "JuliaMO"
+name = "jmo"
 uuid = "e6ec8756-ef6f-11e8-149c-c73bad9b227d"
 authors = ["dbeard <dbeard@groupon.com>"]
 version = "0.1.0"
