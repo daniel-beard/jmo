@@ -10,7 +10,6 @@ const FAT_MAGIC = 0xcafebabe
 const FAT_CIGAM = bswap(FAT_MAGIC)
 
 # Header 'filetype' constants
-
 const  MH_OBJECT = 0x1           # relocatable object file
 const  MH_EXECUTE = 0x2          # demand paged executable file
 const  MH_FVMLIB = 0x3           # fixed VM shared library file

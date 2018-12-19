@@ -25,12 +25,6 @@ function should_swap_bytes(magic::UInt32)
   magic == MH_CIGAM || magic == MH_CIGAM_64
 end
 
-# reads a type from specified offset for given IO object
-function load_bytes(f::IOStream, offset, T)
-  seek(f, offset)
-  read(f, T)
-end
-
 function read_mach_header(f::IOStream, offset, is_64::Bool, is_swap::Bool)
   seek(f, offset)
   if is_64 
@@ -97,14 +91,14 @@ function read_segment_commands(f::IOStream, load_commands_offset::Int64, ncmds::
         println("Section: $(String(section.sectname)) $(String(section.segname))")
         
         # Test printing out contents of __cstring
-        # Probably doesn't handle mutliple strings yet.
+        # TODO: Need to read the flags of the sections and figure out if these are c-strings 
+        # BEFORE trying to dump the constants.
         if occursin("__cstring", String(section.sectname))
-          println("Offset: $(section.offset) $(section.size)")
-          existing_index = position(f)
-          seek(f, section.offset)
-          data = read(f, section.size)
-          println("Data: $data $(String(data))")
-          seek(f, existing_index)
+          strings_from_section(section, f) |> println
+        end
+        
+        if occursin("__objc_classname", String(section.sectname))
+          strings_from_section(section, f) |> println
         end
         
         current_section_offset += sizeof(section)
@@ -168,6 +162,6 @@ function parse_cli_opts(args)
 end
 
 parse_cli_opts(ARGS)
-openFile("/Users/dbeard/Binary")
+openFile("/Users/dbeard/Dev/Personal/jmo/Binaries/ObjcThin")
 
 end # module
