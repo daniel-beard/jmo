@@ -22,6 +22,23 @@ const  MH_DYLIB_STUB = 0x9       # shared library stub for static
 const  MH_DSYM = 0xa             # companion file with only debug
 const  MH_KEXT_BUNDLE = 0xb      # x86_64 kexts
 
+# Hacky macro that converts a vect to a dictionary
+# Can probably break in a number of ways, as this is the first julia macro I've ever written :O
+# E.g. d = @dict[MH_OBJECT, MH_EXECUTE]
+# Becomes: Dict(([MH_OBJECT, "MH_OBJECT"]), (MH_EXECUTE, "MH_EXECUTE")])
+macro dict(x)
+  # Uncomment for debugging
+  # dump(x.head); dump(x.args)
+  # println(string(x.args[1]))
+  if x.head == :vect 
+    local tups = map(i -> (eval(i), string(i)) , x.args)
+    return Expr(:call, Dict, Expr(:tuple, tups...))
+  end
+end
+
+header_filetypes = @dict[MH_OBJECT, MH_EXECUTE, MH_FVMLIB, MH_CORE, MH_PRELOAD, MH_DYLIB,
+                    MH_DYLINKER, MH_BUNDLE, MH_DYLIB_STUB, MH_DSYM, MH_KEXT_BUNDLE]
+
 # Flags field mach header constants
 const MH_NOUNDEFS = 0x1          # the object file has no undefined references
 const MH_INCRLINK = 0x2          # the object file is the output of an incremental link against a base file and can't be link edited again
@@ -49,6 +66,11 @@ const MH_DEAD_STRIPPABLE_DYLIB = 0x400000     # Only for use on dylibs.  When li
 const MH_HAS_TLV_DESCRIPTORS = 0x800000       # Contains a section of type S_THREAD_LOCAL_VARIABLES
 const MH_NO_HEAP_EXECUTION = 0x1000000        # When this bit is set, the OS will run the main executable with a non-executable heap even on platforms (e.g. i386) that don't require it. Only used in MH_EXECUTE filetypes.
 const MH_APP_EXTENSION_SAFE = 0x02000000      # The code was linked for use in an application extension.
+
+header_flags = @dict[MH_NOUNDEFS, MH_INCRLINK, MH_DYLDLINK, MH_BINDATLOAD, MH_PREBOUND, MH_SPLIT_SEGS, MH_LAZY_INIT, MH_TWOLEVEL, MH_FORCE_FLAT,
+                MH_NOMULTIDEFS, MH_NOFIXPREBINDING, MH_PREBINDABLE, MH_ALLMODSBOUND, MH_SUBSECTIONS_VIA_SYMBOLS, MH_CANONICAL, MH_WEAK_DEFINES,
+                MH_BINDS_TO_WEAK, MH_ALLOW_STACK_EXECUTION, MH_ROOT_SAFE, MH_SETUID_SAFE, MH_NO_REEXPORTED_DYLIBS, MH_PIE, MH_DEAD_STRIPPABLE_DYLIB,
+                MH_HAS_TLV_DESCRIPTORS, MH_NO_HEAP_EXECUTION, MH_APP_EXTENSION_SAFE]
 
 # Constants for the cmd field of all load commands
 # Or'd into following load commands where the dy-linker needs to understand the load command for execution.

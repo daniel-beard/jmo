@@ -3,6 +3,7 @@ module JMO
 
 include("constants.jl")
 include("types.jl")
+include("utils.jl")
 
 using ArgParse
 
@@ -135,6 +136,9 @@ function openFile(filename)
   offset += sizeof(header)
   println(header)
   printHeader64(header)
+  
+  println(header_filetype_desc(header))
+  println(header_flags_desc(header))
   
   # read segment commands
   load_cmds = read_segment_commands(f, offset, header.ncmds, is_swap)

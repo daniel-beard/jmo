@@ -91,24 +91,3 @@ struct Section64
   reserved1::UInt32
   reserved2::UInt32
 end
-
-
-# Returns the contents of a section containing c-strings
-# Does not modify IOStreams position
-function strings_from_section(section::Union{Section, Section64}, f::IOStream)
-  existing_index = position(f)
-  seek(f, section.offset)
-  data = read(f, section.size)
-  accum = UInt8[]
-  result = String[]
-  for val in data
-    if val == 0x00
-      push!(result, String(accum))
-      accum = UInt8[]
-    else 
-      push!(accum, val)
-    end
-  end
-  seek(f, existing_index)
-  return result
-end
