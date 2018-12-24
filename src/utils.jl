@@ -2,6 +2,8 @@
 include("types.jl")
 include("constants.jl")
 
+using Printf
+
 # This file contains helper functions for extracting data from sections / segments.
 
 # Returns the contents of a section containing c-strings
@@ -37,4 +39,9 @@ function header_flags_desc(header::Union{MachHeader, MachHeader64})
     push!(descriptions, header_flags[flag])
   end
   join(sort(descriptions), '|')
+end
+
+function uuid_desc(uuid::UUIDCommand)
+  uuid_val = uuid.uuid
+  @sprintf("%02X%02X%02X%02X-%02X%02X-%02X%02X-%02X%02X-%02X%02X%02X%02X%02X%02X", uuid_val...)
 end

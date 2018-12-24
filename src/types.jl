@@ -90,4 +90,5 @@ struct Section64
   flags::UInt32
   reserved1::UInt32
   reserved2::UInt32
+  reserved3::UInt32
 end

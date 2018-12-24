@@ -115,6 +115,11 @@ function read_segment_commands(f::IOStream, load_commands_offset::Int64, ncmds::
       println("Segsize: $(sizeof(segment_command))")
       
       # Load section commands here...
+      
+    elseif load_cmd.cmd == LC_UUID
+      uuid = read_generic(UUIDCommand, f, actual_offset, is_swap)
+      uuid_string = string(uuid.uuid)
+      println("Loaded UUID: $(uuid_desc(uuid))")
     end
     actual_offset += load_cmd.cmdsize
   end
@@ -136,7 +141,6 @@ function openFile(filename)
   offset += sizeof(header)
   println(header)
   printHeader64(header)
-  
   println(header_filetype_desc(header))
   println(header_flags_desc(header))
   
