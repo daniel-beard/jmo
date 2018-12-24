@@ -127,3 +127,81 @@ const LC_VERSION_MIN_TVOS = 0x2F                  # build for AppleTV min OS ver
 const LC_VERSION_MIN_WATCHOS = 0x30               # build for Watch min OS version
 const LC_NOTE = 0x31                              # arbitrary data included within a Mach-O file
 const LC_BUILD_VERSION = 0x32                     # build for platform min OS version
+
+
+# The flags field of a section structure is separated into two parts a section
+# type and section attributes.  The section types are mutually exclusive (it
+# can only have one type) but the section attributes are not (it may have more
+# than one attribute).
+const SECTION_TYPE       = 0x000000ff # 256 section types
+const SECTION_ATTRIBUTES = 0xffffff00 # 24 section attributes
+
+# Constants for the type of a section 
+const S_REGULAR           = 0x0 # regular section
+const S_ZEROFILL          = 0x1 # zero fill on demand section
+const S_CSTRING_LITERALS  = 0x2 # section with only literal C strings
+const S_4BYTE_LITERALS    = 0x3 # section with only 4 byte literals
+const S_8BYTE_LITERALS    = 0x4 # section with only 8 byte literals
+const S_LITERAL_POINTERS  = 0x5 # section with only pointers to literals
+
+# For the two types of symbol pointers sections and the symbol stubs section
+# they have indirect symbol table entries.  For each of the entries in the
+# section the indirect symbol table entries, in corresponding order in the
+# indirect symbol table, start at the index stored in the reserved1 field
+# of the section structure.  Since the indirect symbol table entries
+# correspond to the entries in the section the number of indirect symbol table
+# entries is inferred from the size of the section divided by the size of the
+# entries in the section.  For symbol pointers sections the size of the entries
+# in the section is 4 bytes and for symbol stubs sections the byte size of the
+# stubs is stored in the reserved2 field of the section structure.
+
+const S_NON_LAZY_SYMBOL_POINTERS    = 0x6 # section with only non-lazy symbol pointers
+const S_LAZY_SYMBOL_POINTERS        = 0x7 # section with only lazy symbol pointers
+const S_SYMBOL_STUBS                = 0x8 # section with only symbol stubs, byte size of stub in the reserved2 field
+const S_MOD_INIT_FUNC_POINTERS      = 0x9 # section with only function pointers for initialization
+const S_MOD_TERM_FUNC_POINTERS      = 0xa # section with only function pointers for termination
+const S_COALESCED                   = 0xb # section contains symbols that are to be coalesced
+const S_GB_ZEROFILL                 = 0xc # zero fill on demand section (that can be larger than 4 gigabytes)
+const S_INTERPOSING                 = 0xd # section with only pairs of function pointers for interposing
+const S_16BYTE_LITERALS             = 0xe # section with only 16 byte literals
+const S_DTRACE_DOF                  = 0xf # section contains DTrace Object Format
+const S_LAZY_DYLIB_SYMBOL_POINTERS  = 0x10 # section with only lazy symbol pointers to lazy loaded dylibs
+# Section types to support thread local variables
+const S_THREAD_LOCAL_REGULAR                = 0x11  # template of initial  values for TLVs
+const S_THREAD_LOCAL_ZEROFILL               = 0x12  # template of initial values for TLVs
+const S_THREAD_LOCAL_VARIABLES              = 0x13  # TLV descriptors
+const S_THREAD_LOCAL_VARIABLE_POINTERS      = 0x14  # pointers to TLV descriptors
+const S_THREAD_LOCAL_INIT_FUNCTION_POINTERS = 0x15  # functions to call to initialize TLV values
+
+section_types = @dict[S_REGULAR, S_ZEROFILL, S_CSTRING_LITERALS, S_4BYTE_LITERALS, S_8BYTE_LITERALS, S_LITERAL_POINTERS,
+                     S_NON_LAZY_SYMBOL_POINTERS, S_LAZY_SYMBOL_POINTERS, S_SYMBOL_STUBS, S_MOD_INIT_FUNC_POINTERS, 
+                     S_MOD_TERM_FUNC_POINTERS, S_COALESCED, S_GB_ZEROFILL, S_INTERPOSING, S_16BYTE_LITERALS, S_DTRACE_DOF,
+                     S_LAZY_DYLIB_SYMBOL_POINTERS, S_THREAD_LOCAL_REGULAR, S_THREAD_LOCAL_VARIABLES, S_THREAD_LOCAL_VARIABLE_POINTERS,
+                     S_THREAD_LOCAL_INIT_FUNCTION_POINTERS]
+
+# Constants for the section attributes part of the flags field of a section structure.
+const SECTION_ATTRIBUTES_USR        = 0xff000000 # User setable attributes
+const S_ATTR_PURE_INSTRUCTIONS      = 0x80000000 # section contains only true machine instructions
+const S_ATTR_NO_TOC                 = 0x40000000 # section contains coalesced symbols that are not to be in a ranlib table of contents
+const S_ATTR_STRIP_STATIC_SYMS      = 0x20000000 # ok to strip static symbols in this section in files with the MH_DYLDLINK flag
+const S_ATTR_NO_DEAD_STRIP          = 0x10000000 # no dead stripping
+const S_ATTR_LIVE_SUPPORT           = 0x08000000 # blocks are live if they reference live blocks
+const S_ATTR_SELF_MODIFYING_CODE    = 0x04000000 # Used with i386 code stubs written on by dyld
+
+# If a segment contains any sections marked with S_ATTR_DEBUG then all
+# sections in that segment must have this attribute.  No section other than
+# a section marked with this attribute may reference the contents of this
+# section.  A section with this attribute may contain no symbols and must have
+# a section type S_REGULAR.  The static linker will not copy section contents
+# from sections with this attribute into its output file.  These sections
+# generally contain DWARF debugging info.
+const S_ATTR_DEBUG                  = 0x02000000 # a debug section
+const SECTION_ATTRIBUTES_SYS        = 0x00ffff00 # system setable attributes
+const S_ATTR_SOME_INSTRUCTIONS      = 0x00000400 # section contains some machine instructions
+const S_ATTR_EXT_RELOC              = 0x00000200 # section has external relocation entries
+const S_ATTR_LOC_RELOC              = 0x00000100 # section has local relocation entries
+
+# Note: SECTION_ATTRIBUTES_USR && SECTION_ATTRIBUTES_SYS are not included, as they are sub-masks. Not used right now.
+section_attributes = @dict[S_ATTR_PURE_INSTRUCTIONS, S_ATTR_NO_TOC, S_ATTR_STRIP_STATIC_SYMS, S_ATTR_NO_DEAD_STRIP,
+                          S_ATTR_LIVE_SUPPORT, S_ATTR_SELF_MODIFYING_CODE, S_ATTR_DEBUG, S_ATTR_SOME_INSTRUCTIONS, 
+                          S_ATTR_EXT_RELOC, S_ATTR_LOC_RELOC]

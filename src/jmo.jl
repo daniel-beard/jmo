@@ -90,16 +90,24 @@ function read_segment_commands(f::IOStream, load_commands_offset::Int64, ncmds::
       for sect = 1:segment_command.nsects
         section = read_generic(Section64, f, current_section_offset, is_swap)
         println("Section: $(String(section.sectname)) $(String(section.segname))")
+        println("Section type: $(section_type_desc(section))")
+        println("Section attr: $(section_attributes_desc(section))")
         
         # Test printing out contents of __cstring
         # TODO: Need to read the flags of the sections and figure out if these are c-strings 
         # BEFORE trying to dump the constants.
         if occursin("__cstring", String(section.sectname))
           strings_from_section(section, f) |> println
+          section_type_desc(section) |> println
         end
         
         if occursin("__objc_classname", String(section.sectname))
           strings_from_section(section, f) |> println
+        end
+        
+        if occursin("__got", String(section.sectname))
+          section_type_desc(section) |> println
+          section_attributes_desc(section) |> println
         end
         
         current_section_offset += sizeof(section)
