@@ -114,7 +114,6 @@ function read_segment_commands(f::IOStream, load_commands_offset::Int64, ncmds::
       end
 
       
-      # Load section commands here...
       
     elseif load_cmd.cmd == LC_SEGMENT
       segment_command = read_generic(SegmentCommand, f, actual_offset, is_swap)
@@ -122,7 +121,6 @@ function read_segment_commands(f::IOStream, load_commands_offset::Int64, ncmds::
       println("Segname: $(segname_string)")
       println("Segsize: $(sizeof(segment_command))")
       
-      # Load section commands here...
       
     elseif load_cmd.cmd == LC_UUID
       uuid = read_generic(UUIDCommand, f, actual_offset, is_swap)
@@ -132,6 +130,11 @@ function read_segment_commands(f::IOStream, load_commands_offset::Int64, ncmds::
       dylib = read_generic(DylibCommand, f, actual_offset, is_swap)
       dylib_name = read_cstring(load_cmd_offset + dylib.name, f)
       println("Loaded DYLIB: $(dylib_name)")
+      
+    elseif in(load_cmd.cmd, [LC_VERSION_MIN_MACOSX, LC_VERSION_MIN_IPHONEOS, LC_VERSION_MIN_WATCHOS, LC_VERSION_MIN_TVOS])
+      version_min = read_generic(VersionMinCommand, f, actual_offset, is_swap)
+      println("Loaded version min: $(version_min.version) $(version_min.sdk)")  
+      version_desc(version_min.version) |> println
     end
     actual_offset += load_cmd.cmdsize
   end

@@ -110,3 +110,11 @@ struct DylibCommand
   current_version::UInt32
   compatibility_version::UInt32
 end
+
+# Contains the min OS version on which this binary was built to run
+struct VersionMinCommand
+  cmd::UInt32     # LC_VERSION_MIN_MACOSX || LC_VERSION_MIN_IPHONEOS || LC_VERSION_MIN_WATCHOS || LC_VERSION_MIN_TVOS
+  cmdsize::UInt32
+  version::UInt32 # X.Y.Z is encoded in nibbles xxxx.yy.zz
+  sdk::UInt32     # X.Y.Z is encoded in nibbles xxxx.yy.zz
+end

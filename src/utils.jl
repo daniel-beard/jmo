@@ -65,8 +65,16 @@ function uuid_desc(uuid::UUIDCommand)
   @sprintf("%02X%02X%02X%02X-%02X%02X-%02X%02X-%02X%02X-%02X%02X%02X%02X%02X%02X", uuid_val...)
 end
 
+function version_desc(val::UInt32)
+  # X.Y.Z is encoded in nibbles xxxx.yy.zz
+  x = val >> 16
+  y = (val & 0xffff) >> 8
+  z = val & 0xff
+  @sprintf("%d.%d.%d", x, y, z)
+end
+
 # Reads a \0 delimited cstring starting at an index.
-# Does not modify IOStreams position.
+# Does not modify IOStreams position
 function read_cstring(startIndex::UInt32, f::IOStream)
   existing_index = position(f)
   seek(f, startIndex)
