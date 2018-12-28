@@ -77,7 +77,6 @@ struct Section
   reserved2::UInt32
 end
 
-
 struct Section64
   sectname::SVector{16, UInt8}
   segname::SVector{16, UInt8}
@@ -91,4 +90,23 @@ struct Section64
   reserved1::UInt32
   reserved2::UInt32
   reserved3::UInt32
+end
+
+# Variable length string union, we only need the offset, the pointer is not used in MachO files
+# A variable length string in a load command is represented by an lc_str
+# union.  The strings are stored just after the load command structure and
+# the offset is from the start of the load command structure.  The size
+# of the string is reflected in the cmdsize field of the load command.
+# Once again any padded bytes to bring the cmdsize field to a multiple
+# of 4 bytes must be zero.
+const LCStr = UInt32
+
+# This structure is flattened from the load cmd & Dylib structure.
+struct DylibCommand
+  cmd::UInt32
+  cmdsize::UInt32
+  name::LCStr
+  timestamp::UInt32
+  current_version::UInt32
+  compatibility_version::UInt32
 end

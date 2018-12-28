@@ -73,7 +73,7 @@ end
 function read_segment_commands(f::IOStream, load_commands_offset::Int64, ncmds::UInt32, is_swap::Bool)
   actual_offset = load_commands_offset
   for i = 1:ncmds
-    # load_cmd = read_load_command(f, actual_offset, is_swap)
+    load_cmd_offset = UInt32(actual_offset)
     load_cmd = read_generic(LoadCommand, f, actual_offset, is_swap)
     
     # Load SegmentCommand && SegmentCommand64 values
@@ -128,6 +128,10 @@ function read_segment_commands(f::IOStream, load_commands_offset::Int64, ncmds::
       uuid = read_generic(UUIDCommand, f, actual_offset, is_swap)
       uuid_string = string(uuid.uuid)
       println("Loaded UUID: $(uuid_desc(uuid))")
+    elseif load_cmd.cmd == LC_LOAD_DYLIB
+      dylib = read_generic(DylibCommand, f, actual_offset, is_swap)
+      dylib_name = read_cstring(load_cmd_offset + dylib.name, f)
+      println("Loaded DYLIB: $(dylib_name)")
     end
     actual_offset += load_cmd.cmdsize
   end

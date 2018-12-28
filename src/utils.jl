@@ -64,3 +64,16 @@ function uuid_desc(uuid::UUIDCommand)
   uuid_val = uuid.uuid
   @sprintf("%02X%02X%02X%02X-%02X%02X-%02X%02X-%02X%02X-%02X%02X%02X%02X%02X%02X", uuid_val...)
 end
+
+# Reads a \0 delimited cstring starting at an index.
+# Does not modify IOStreams position.
+function read_cstring(startIndex::UInt32, f::IOStream)
+  existing_index = position(f)
+  seek(f, startIndex)
+  accum = UInt8[]
+  while ((data = read(f, UInt8)) != 0x0)
+    push!(accum, data)
+  end
+  seek(f, existing_index)
+  return String(accum)
+end
