@@ -7,12 +7,6 @@ include("utils.jl")
 
 using ArgParse
 
-function printHeader64(header)
-  h = header
-  println("magic\t\tcputype\t\tcpusubtype\tfiletype\tncmds\t\tsizeofcmds\tflags\t\treserved")
-  println("$(repr(h.magic))\t$(h.cputype)\t$(h.cpusubtype)\t$(h.filetype)\t\t$(h.ncmds)\t\t$(h.sizeofcmds)\t\t$(h.flags)\t\t$(h.reserved)")
-end
-
 function read_magic(f::IOStream)
   seekstart(f)
   read(f, UInt32)
@@ -148,20 +142,15 @@ function openFile(filename)
   is_64 = is_magic_64(magic)
   is_swap = should_swap_bytes(magic)
   
-  println("Is magic 64 $is_64")
-  println("Should swap bytes $is_swap")
-  
   # read the header
   header = read_mach_header(f, offset, is_64, is_swap)
   offset += sizeof(header)
   println(header)
-  printHeader64(header)
   println(header_filetype_desc(header))
   println(header_flags_desc(header))
   
   # read segment commands
   load_cmds = read_segment_commands(f, offset, header.ncmds, is_swap)
-  # println(load_cmds)
   
   close(f)
 end

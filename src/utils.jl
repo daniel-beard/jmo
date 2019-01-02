@@ -85,3 +85,11 @@ function read_cstring(startIndex::UInt32, f::IOStream)
   seek(f, existing_index)
   return String(accum)
 end
+
+# Type show implementations
+####################################
+
+function Base.show(io::IO, h::Union{MachHeader, MachHeader64})
+  println("magic\t\tcputype\t\tcpusubtype\tfiletype\tncmds\t\tsizeofcmds\tflags\t\treserved")
+  println("$(repr(h.magic))\t$(h.cputype)\t$(h.cpusubtype)\t$(h.filetype)\t\t$(h.ncmds)\t\t$(h.sizeofcmds)\t\t$(h.flags)\t\t$(h.reserved)")
+end

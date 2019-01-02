@@ -3,8 +3,8 @@ using StaticArrays
 
 struct MachHeader
   magic::UInt32
-  cputype::UInt32 # integer
-  cpusubtype::UInt32 # integer
+  cputype::UInt32
+  cpusubtype::UInt32
   filetype::UInt32
   ncmds::UInt32
   sizeofcmds::UInt32
@@ -111,6 +111,12 @@ struct DylibCommand
   compatibility_version::UInt32
 end
 
+struct RPathCommand
+  cmd::UInt32
+  cmdsize::UInt32
+  path::LCStr
+end
+
 # Contains the min OS version on which this binary was built to run
 struct VersionMinCommand
   cmd::UInt32     # LC_VERSION_MIN_MACOSX || LC_VERSION_MIN_IPHONEOS || LC_VERSION_MIN_WATCHOS || LC_VERSION_MIN_TVOS
@@ -118,3 +124,33 @@ struct VersionMinCommand
   version::UInt32 # X.Y.Z is encoded in nibbles xxxx.yy.zz
   sdk::UInt32     # X.Y.Z is encoded in nibbles xxxx.yy.zz
 end
+
+# min OS version for which this binary was built to run, for its platform.
+# The list of known platforms and tool values following it.
+struct BuildVersionCommand
+  cmd::UInt32       # LC_BUILD_VERSION
+  cmdsize::UInt32   # sizeof(BuildVersionCommand) + (ntools * sizeof(BuildToolVersion))
+  platform::UInt32  # platform
+  minos::UInt32     # X.Y.Z is encoded in nibbles xxxx.yy.zz
+  sdk::UInt32       # X.Y.Z is encoded in nibbles xxxx.yy.zz
+  ntools::UInt32    # number of tool entries following this
+end
+
+struct BuildToolVersion
+  tool::UInt32    # enum for the tool
+  version::UInt32 # version number of the tool
+end
+
+# Specifies the symbol table for this file. This information is used by both static and dynamic linkers when linking the file, 
+# and also by debuggers to map symbols to the original source code files from which the symbols were generated.
+struct SymtabCommand
+  cmd::UInt32       # LC_SYMTAB
+  cmdsize::UInt32   # sizeof(SymtabCommand)
+  symoff::UInt32    # symbol table offset
+  nsyms::UInt32     # number of symbol table entries
+  stroff::UInt32    # string table offset
+  strsize::UInt32   # string table size in bytes
+end
+
+
+
