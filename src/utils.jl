@@ -60,11 +60,6 @@ function section_attributes_desc(section::Union{Section, Section64})
   join(sort(descriptions), '|')
 end
 
-function uuid_desc(uuid::UUIDCommand)
-  uuid_val = uuid.uuid
-  @sprintf("%02X%02X%02X%02X-%02X%02X-%02X%02X-%02X%02X-%02X%02X%02X%02X%02X%02X", uuid_val...)
-end
-
 function version_desc(val::UInt32)
   # X.Y.Z is encoded in nibbles xxxx.yy.zz
   x = val >> 16
@@ -90,6 +85,12 @@ end
 ####################################
 
 function Base.show(io::IO, h::Union{MachHeader, MachHeader64})
-  println("magic\t\tcputype\t\tcpusubtype\tfiletype\tncmds\t\tsizeofcmds\tflags\t\treserved")
-  println("$(repr(h.magic))\t$(h.cputype)\t$(h.cpusubtype)\t$(h.filetype)\t\t$(h.ncmds)\t\t$(h.sizeofcmds)\t\t$(h.flags)\t\t$(h.reserved)")
+  print(io, "magic\t\tcputype\t\tcpusubtype\tfiletype\tncmds\t\tsizeofcmds\tflags\t\treserved\n")
+  print(io, "$(repr(h.magic))\t$(h.cputype)\t$(h.cpusubtype)\t$(h.filetype)\t\t$(h.ncmds)\t\t$(h.sizeofcmds)\t\t$(h.flags)\t\t$(h.reserved)\n")
+end
+
+function Base.show(io::IO, uuid::UUIDCommand)
+  uuid_val = uuid.uuid
+  string = @sprintf("%02X%02X%02X%02X-%02X%02X-%02X%02X-%02X%02X-%02X%02X%02X%02X%02X%02X", uuid_val...)
+  print(io, string)
 end

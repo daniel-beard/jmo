@@ -6,4 +6,5 @@ version = "0.1.0"
 [deps]
 ArgParse = "c7e460c6-2fb9-53a9-8c5b-16f535851c63"
 MacroTools = "1914dd2f-81c6-5fcd-8719-6d5c9610ff09"
+PackageCompiler = "9b87118b-4619-50d2-8e1e-99f35a4d4d9d"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"

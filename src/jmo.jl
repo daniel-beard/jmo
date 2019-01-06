@@ -1,11 +1,24 @@
 
 module JMO 
 
+
 include("constants.jl")
 include("types.jl")
 include("utils.jl")
 
 using ArgParse
+
+const COMMAND_MAP = Dict(
+  LC_UUID => UUIDCommand,
+  LC_SEGMENT => SegmentCommand,
+  LC_SEGMENT_64 => SegmentCommand64,
+  LC_LOAD_DYLIB => DylibCommand,
+  LC_VERSION_MIN_IPHONEOS => VersionMinCommand,
+  LC_VERSION_MIN_MACOSX => VersionMinCommand,
+  LC_VERSION_MIN_TVOS => VersionMinCommand,
+  LC_VERSION_MIN_WATCHOS => VersionMinCommand,
+  
+)
 
 function read_magic(f::IOStream)
   seekstart(f)
@@ -107,29 +120,37 @@ function read_segment_commands(f::IOStream, load_commands_offset::Int64, ncmds::
         current_section_offset += sizeof(section)
       end
 
-      
-      
-    elseif load_cmd.cmd == LC_SEGMENT
-      segment_command = read_generic(SegmentCommand, f, actual_offset, is_swap)
-      segname_string = String(segment_command.segname)
-      println("Segname: $(segname_string)")
-      println("Segsize: $(sizeof(segment_command))")
-      
-      
-    elseif load_cmd.cmd == LC_UUID
-      uuid = read_generic(UUIDCommand, f, actual_offset, is_swap)
-      uuid_string = string(uuid.uuid)
-      println("Loaded UUID: $(uuid_desc(uuid))")
-    elseif load_cmd.cmd == LC_LOAD_DYLIB
-      dylib = read_generic(DylibCommand, f, actual_offset, is_swap)
-      dylib_name = read_cstring(load_cmd_offset + dylib.name, f)
-      println("Loaded DYLIB: $(dylib_name)")
-      
-    elseif in(load_cmd.cmd, [LC_VERSION_MIN_MACOSX, LC_VERSION_MIN_IPHONEOS, LC_VERSION_MIN_WATCHOS, LC_VERSION_MIN_TVOS])
-      version_min = read_generic(VersionMinCommand, f, actual_offset, is_swap)
-      println("Loaded version min: $(version_min.version) $(version_min.sdk)")  
-      version_desc(version_min.version) |> println
+      # Load using the lookup map
+    else 
+      # Do we have a match? 
+      if haskey(COMMAND_MAP, load_cmd.cmd)
+        load_type = COMMAND_MAP[load_cmd.cmd]
+        command = read_generic(load_type, f, actual_offset, is_swap)
+        println("Loaded a command using the map: $(command)")
+      end
     end
+      
+    # elseif load_cmd.cmd == LC_SEGMENT
+    #   segment_command = read_generic(SegmentCommand, f, actual_offset, is_swap)
+    #   segname_string = String(segment_command.segname)
+    #   println("Segname: $(segname_string)")
+    #   println("Segsize: $(sizeof(segment_command))")
+      
+      
+    # elseif load_cmd.cmd == LC_UUID
+    #   uuid = read_generic(UUIDCommand, f, actual_offset, is_swap)
+    #   uuid_string = string(uuid.uuid)
+    #   println("Loaded UUID: $(uuid_desc(uuid))")
+    # elseif load_cmd.cmd == LC_LOAD_DYLIB
+    #   dylib = read_generic(DylibCommand, f, actual_offset, is_swap)
+    #   dylib_name = read_cstring(load_cmd_offset + dylib.name, f)
+    #   println("Loaded DYLIB: $(dylib_name)")
+      
+    # elseif in(load_cmd.cmd, [LC_VERSION_MIN_MACOSX, LC_VERSION_MIN_IPHONEOS, LC_VERSION_MIN_WATCHOS, LC_VERSION_MIN_TVOS])
+    #   version_min = read_generic(VersionMinCommand, f, actual_offset, is_swap)
+    #   println("Loaded version min: $(version_min.version) $(version_min.sdk)")  
+    #   version_desc(version_min.version) |> println
+    # end
     actual_offset += load_cmd.cmdsize
   end
 end
@@ -173,7 +194,14 @@ function parse_cli_opts(args)
   end
 end
 
-parse_cli_opts(ARGS)
-openFile("/Users/dbeard/Dev/Personal/jmo/Binaries/ObjcThin")
+# Equivalent to main func
+Base.@ccallable function julia_main(ARGS::Vector{String})::Cint
+  parse_cli_opts(ARGS)
+  openFile("/Users/dbeard/Dev/Personal/jmo/Binaries/ObjcThin")
+  return 0
+end
+
+#TODO: Might need to comment this out when building an executable.
+julia_main([""])
 
 end # module
