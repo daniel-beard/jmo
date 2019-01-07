@@ -92,5 +92,25 @@ end
 function Base.show(io::IO, uuid::UUIDCommand)
   uuid_val = uuid.uuid
   string = @sprintf("%02X%02X%02X%02X-%02X%02X-%02X%02X-%02X%02X-%02X%02X%02X%02X%02X%02X", uuid_val...)
-  print(io, string)
+  println(io, "LC_UUID:")
+  println(io, string)
 end
+
+function Base.show(io::IO, version::VersionMinCommand)
+  map = Dict(
+    LC_VERSION_MIN_MACOSX=>"LC_VERSION_MIN_MACOSX",
+    LC_VERSION_MIN_IPHONEOS=>"LC_VERSION_MIN_IPHONEOS",
+    LC_VERSION_MIN_WATCHOS=>"LC_VERSION_MIN_WATCHOS",
+    LC_VERSION_MIN_TVOS=>"LC_VERSION_MIN_TVOS"
+  )
+  name = get(map, version.cmd, "UNKNOWN")
+  println(io, "$(name):")
+  println(io, "Version: $(version_desc(version.version))")
+  println(io, "SDK: $(version_desc(version.sdk))")
+end
+
+# function Base.show(io::IO, dylib::DylibCommand)
+  # TODO: I think here we might need to parse all structs into a meta-structure, 
+  # one that contains base offsets in the file, since things like the LCStr in DylibCommand depend on the 
+  # load commands offset, since the offset is relative, not absolute.
+# end

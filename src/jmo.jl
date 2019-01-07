@@ -126,7 +126,7 @@ function read_segment_commands(f::IOStream, load_commands_offset::Int64, ncmds::
       if haskey(COMMAND_MAP, load_cmd.cmd)
         load_type = COMMAND_MAP[load_cmd.cmd]
         command = read_generic(load_type, f, actual_offset, is_swap)
-        println("Loaded a command using the map: $(command)")
+        println(command)
       end
     end
       
