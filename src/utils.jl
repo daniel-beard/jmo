@@ -89,28 +89,28 @@ function Base.show(io::IO, h::Union{MachHeader, MachHeader64})
   print(io, "$(repr(h.magic))\t$(h.cputype)\t$(h.cpusubtype)\t$(h.filetype)\t\t$(h.ncmds)\t\t$(h.sizeofcmds)\t\t$(h.flags)\t\t$(h.reserved)\n")
 end
 
-function Base.show(io::IO, uuid::UUIDCommand)
+function Base.show(io::IO, uuid::Pair{UUIDCommand, MetaStruct})
+  uuid = uuid.first
   uuid_val = uuid.uuid
   string = @sprintf("%02X%02X%02X%02X-%02X%02X-%02X%02X-%02X%02X-%02X%02X%02X%02X%02X%02X", uuid_val...)
   println(io, "LC_UUID:")
   println(io, string)
 end
 
-function Base.show(io::IO, version::VersionMinCommand)
-  map = Dict(
-    LC_VERSION_MIN_MACOSX=>"LC_VERSION_MIN_MACOSX",
-    LC_VERSION_MIN_IPHONEOS=>"LC_VERSION_MIN_IPHONEOS",
-    LC_VERSION_MIN_WATCHOS=>"LC_VERSION_MIN_WATCHOS",
-    LC_VERSION_MIN_TVOS=>"LC_VERSION_MIN_TVOS"
-  )
+function Base.show(io::IO, version::Pair{VersionMinCommand, MetaStruct})
+  map = @dict[LC_VERSION_MIN_MACOSX,LC_VERSION_MIN_IPHONEOS,LC_VERSION_MIN_WATCHOS,LC_VERSION_MIN_TVOS]
+  version = version.first
   name = get(map, version.cmd, "UNKNOWN")
   println(io, "$(name):")
   println(io, "Version: $(version_desc(version.version))")
   println(io, "SDK: $(version_desc(version.sdk))")
 end
 
-# function Base.show(io::IO, dylib::DylibCommand)
-  # TODO: I think here we might need to parse all structs into a meta-structure, 
-  # one that contains base offsets in the file, since things like the LCStr in DylibCommand depend on the 
-  # load commands offset, since the offset is relative, not absolute.
-# end
+function Base.show(io::IO, dylib::Pair{DylibCommand, MetaStruct})
+  (dylib, meta) = dylib
+  offset = UInt32(meta.offset + dylib.name)
+  name = read_cstring(offset, meta.f)
+  println(io, "LC_LOAD_DYLIB:")
+  println(io, name)
+  # TODO: Print out the rest of the fields here. Should I introduce a verbose flag for fields I don't really care about?
+end

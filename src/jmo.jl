@@ -1,7 +1,6 @@
 
 module JMO 
 
-
 include("constants.jl")
 include("types.jl")
 include("utils.jl")
@@ -17,7 +16,6 @@ const COMMAND_MAP = Dict(
   LC_VERSION_MIN_MACOSX => VersionMinCommand,
   LC_VERSION_MIN_TVOS => VersionMinCommand,
   LC_VERSION_MIN_WATCHOS => VersionMinCommand,
-  
 )
 
 function read_magic(f::IOStream)
@@ -33,45 +31,22 @@ function should_swap_bytes(magic::UInt32)
   magic == MH_CIGAM || magic == MH_CIGAM_64
 end
 
-function read_mach_header(f::IOStream, offset, is_64::Bool, is_swap::Bool)
-  seek(f, offset)
-  if is_64 
-    T = MachHeader64
-    header_64 = T(
-      read(f, fieldtype(T, 1)), # header is always native endianness.
-      is_swap ? bswap(read(f, fieldtype(T, 2))) : read(f, fieldtype(T, 2)),
-      is_swap ? bswap(read(f, fieldtype(T, 3))) : read(f, fieldtype(T, 3)),
-      is_swap ? bswap(read(f, fieldtype(T, 4))) : read(f, fieldtype(T, 4)),
-      is_swap ? bswap(read(f, fieldtype(T, 5))) : read(f, fieldtype(T, 5)),
-      is_swap ? bswap(read(f, fieldtype(T, 6))) : read(f, fieldtype(T, 6)),
-      is_swap ? bswap(read(f, fieldtype(T, 7))) : read(f, fieldtype(T, 7)),
-      is_swap ? bswap(read(f, fieldtype(T, 8))) : read(f, fieldtype(T, 8)),
-    )
-    return header_64
-  else 
-    T = MachHeader
-    header = T(
-      read(f, fieldtype(T, 1)), # header is always native endianness.
-      is_swap ? bswap(read(f, fieldtype(T, 2))) : read(f, fieldtype(T, 2)),
-      is_swap ? bswap(read(f, fieldtype(T, 3))) : read(f, fieldtype(T, 3)),
-      is_swap ? bswap(read(f, fieldtype(T, 4))) : read(f, fieldtype(T, 4)),
-      is_swap ? bswap(read(f, fieldtype(T, 5))) : read(f, fieldtype(T, 5)),
-      is_swap ? bswap(read(f, fieldtype(T, 6))) : read(f, fieldtype(T, 6)),
-      is_swap ? bswap(read(f, fieldtype(T, 7))) : read(f, fieldtype(T, 7)),
-    )
-    return header
-  end
-end
-
-function read_generic(T, f::IOStream, offset::Int64, is_swap::Bool)
+# Generic read function, returns a Pair containing the type T and a meta struct that contains some 
+# meta info like offset and IOStream
+function read_generic(T, f::IOStream, offset::Int64, is_swap::Bool; first_field_flip = true)::Pair{T, MetaStruct}
   seek(f, offset)
   nfields = fieldcount(T)
   fields = Any[]
   for i = 1:nfields
-    field = is_swap ? bswap(read(f, fieldtype(T, i))) : read(f, fieldtype(T, i))
+    if i == 1 && !first_field_flip
+      field = read(f, fieldtype(T, i))
+    else
+      field = is_swap ? bswap(read(f, fieldtype(T, i))) : read(f, fieldtype(T, i))
+    end
     push!(fields, field)
   end
-  return T(fields...)
+  meta = MetaStruct(offset, f)
+  return Pair(T(fields...), meta)
 end
 
 # iostream, offset, header type, ncmds, is_swap
@@ -80,13 +55,12 @@ end
 function read_segment_commands(f::IOStream, load_commands_offset::Int64, ncmds::UInt32, is_swap::Bool)
   actual_offset = load_commands_offset
   for i = 1:ncmds
-    load_cmd_offset = UInt32(actual_offset)
-    load_cmd = read_generic(LoadCommand, f, actual_offset, is_swap)
+    load_cmd = read_generic(LoadCommand, f, actual_offset, is_swap).first
     
     # Load SegmentCommand && SegmentCommand64 values
     # Since only the types of fields change, the fieldtype's handle that.
     if load_cmd.cmd == LC_SEGMENT_64
-      segment_command = read_generic(SegmentCommand64, f, actual_offset, is_swap)
+      segment_command = read_generic(SegmentCommand64, f, actual_offset, is_swap).first
       segname_string = String(segment_command.segname)
       println("Segname: $(segname_string)")
       println("Segsize: $(sizeof(segment_command))")
@@ -95,7 +69,7 @@ function read_segment_commands(f::IOStream, load_commands_offset::Int64, ncmds::
       # Read sections for this segment
       current_section_offset = actual_offset + sizeof(segment_command)
       for sect = 1:segment_command.nsects
-        section = read_generic(Section64, f, current_section_offset, is_swap)
+        section = read_generic(Section64, f, current_section_offset, is_swap).first
         println("Section: $(String(section.sectname)) $(String(section.segname))")
         println("Section type: $(section_type_desc(section))")
         println("Section attr: $(section_attributes_desc(section))")
@@ -164,7 +138,8 @@ function openFile(filename)
   is_swap = should_swap_bytes(magic)
   
   # read the header
-  header = read_mach_header(f, offset, is_64, is_swap)
+  header_type = is_64 ? MachHeader64 : MachHeader
+  header = read_generic(header_type, f, offset, is_swap, first_field_flip = false).first
   offset += sizeof(header)
   println(header)
   println(header_filetype_desc(header))
@@ -201,7 +176,6 @@ Base.@ccallable function julia_main(ARGS::Vector{String})::Cint
   return 0
 end
 
-#TODO: Might need to comment this out when building an executable.
 julia_main([""])
 
 end # module

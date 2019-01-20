@@ -1,6 +1,12 @@
 
 using StaticArrays
 
+# Contains meta information about each struct we parse:
+struct MetaStruct
+  offset::Int64
+  f::IOStream
+end
+
 struct MachHeader
   magic::UInt32
   cputype::UInt32
