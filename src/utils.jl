@@ -41,6 +41,11 @@ function header_flags_desc(header::Union{MachHeader, MachHeader64})
   join(sort(descriptions), '|')
 end
 
+# Returns a string description of the CPU architecture, from a mach header
+function header_cpu_type_desc(header::Union{MachHeader, MachHeader64})
+  cpu_types[header.cputype]
+end
+
 # Returns section type as string from section flags
 # e.g. "S_REGULAR"
 function section_type_desc(section::Union{Section, Section64})
@@ -84,10 +89,10 @@ end
 # Type show implementations
 ####################################
 
-function Base.show(io::IO, h::Union{MachHeader, MachHeader64})
-  print(io, "magic\t\tcputype\t\tcpusubtype\tfiletype\tncmds\t\tsizeofcmds\tflags\t\treserved\n")
-  print(io, "$(repr(h.magic))\t$(h.cputype)\t$(h.cpusubtype)\t$(h.filetype)\t\t$(h.ncmds)\t\t$(h.sizeofcmds)\t\t$(h.flags)\t\t$(h.reserved)\n")
-end
+# function Base.show(io::IO, h::Union{MachHeader, MachHeader64})
+#   print(io, "magic\t\tcputype\t\tcpusubtype\tfiletype\tncmds\t\tsizeofcmds\tflags\t\treserved\n")
+#   print(io, "$(repr(h.magic))\t$(h.cputype)\t$(h.cpusubtype)\t$(h.filetype)\t\t$(h.ncmds)\t\t$(h.sizeofcmds)\t\t$(h.flags)\t\t$(h.reserved)\n")
+# end
 
 function Base.show(io::IO, uuid::Pair{UUIDCommand, MetaStruct})
   uuid = uuid.first

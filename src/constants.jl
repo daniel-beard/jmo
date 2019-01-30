@@ -205,3 +205,208 @@ const S_ATTR_LOC_RELOC              = 0x00000100 # section has local relocation 
 section_attributes = @dict[S_ATTR_PURE_INSTRUCTIONS, S_ATTR_NO_TOC, S_ATTR_STRIP_STATIC_SYMS, S_ATTR_NO_DEAD_STRIP,
                           S_ATTR_LIVE_SUPPORT, S_ATTR_SELF_MODIFYING_CODE, S_ATTR_DEBUG, S_ATTR_SOME_INSTRUCTIONS, 
                           S_ATTR_EXT_RELOC, S_ATTR_LOC_RELOC]
+
+
+# machine constants (like CPU type)
+# TODO: Can't mark these as CPUType until the following is resolved:
+#   -> syntax: type declarations on global variables are not yet supported
+const CPUType = Int32
+
+# Capability bits used in the definition of cpu_type.
+const CPU_ARCH_MASK           = 0xff000000      # mask for architecture bits
+const CPU_ARCH_ABI64          = 0x01000000      # 64 bit ABI
+const CPU_ARCH_ABI64_32       = 0x02000000      # ABI for 64-bit hardware with 32-bit types; LP32
+
+# Machine types known by all.
+const CPU_TYPE_ANY            = -1
+const CPU_TYPE_VAX            = 1
+# skip 2::CPUType
+# skip 3::CPUType
+# skip 4::CPUType
+# skip 5::CPUType
+const CPU_TYPE_MC680x0        = 6
+const CPU_TYPE_X86            = 7
+const CPU_TYPE_I386           = CPU_TYPE_X86                  # compatibility
+const CPU_TYPE_X86_64         = (CPU_TYPE_X86 | CPU_ARCH_ABI64)
+# skip CPU_TYPE_MIPS  8::CPUType
+# skip                9::CPUType
+const CPU_TYPE_MC98000        = 10
+const CPU_TYPE_HPPA           = 11
+const CPU_TYPE_ARM            = 12
+const CPU_TYPE_ARM64          = (CPU_TYPE_ARM | CPU_ARCH_ABI64)
+const CPU_TYPE_ARM64_32       = (CPU_TYPE_ARM | CPU_ARCH_ABI64_32)
+const CPU_TYPE_MC88000        = 13
+const CPU_TYPE_SPARC          = 14
+const CPU_TYPE_I860           = 15
+# skip CPU_TYPE_ALPHA 16::CPUType
+# skip 17::CPUType
+const CPU_TYPE_POWERPC        = 18
+const CPU_TYPE_POWERPC64      = (CPU_TYPE_POWERPC | CPU_ARCH_ABI64)
+
+cpu_types = @dict[CPU_TYPE_ANY, CPU_TYPE_VAX, CPU_TYPE_MC680x0, CPU_TYPE_X86, CPU_TYPE_I386, CPU_TYPE_X86_64,
+                  CPU_TYPE_MC98000, CPU_TYPE_HPPA, CPU_TYPE_ARM, CPU_TYPE_ARM64, CPU_TYPE_ARM64_32, 
+                  CPU_TYPE_MC88000, CPU_TYPE_SPARC, CPU_TYPE_I860, CPU_TYPE_POWERPC, CPU_TYPE_POWERPC64]
+
+
+# CPU subtypes
+
+# TODO: Can't mark these as CPUSubType until the following is resolved:
+#   -> syntax: type declarations on global variables are not yet supported
+const CPUSubType = Int32
+
+# Capability bits used in the definition of cpu_subtype.
+const CPU_SUBTYPE_MASK       = 0xff000000      # mask for feature flags
+const CPU_SUBTYPE_LIB64      = 0x80000000      # 64 bit libraries
+
+# Object files that are hand-crafted to run on any implementation of an architecture are tagged with CPU_SUBTYPE_MULTIPLE.  This functions essentially the same as
+# the "ALL" subtype of an architecture except that it allows us to easily find object files that may need to be modified whenever a new implementation of an architecture comes out.
+# It is the responsibility of the implementor to make sure the software handles unsupported implementations elegantly.
+const CPU_SUBTYPE_MULTIPLE            = -1
+const CPU_SUBTYPE_LITTLE_ENDIAN       = 0
+const CPU_SUBTYPE_BIG_ENDIAN          = 1
+
+# Machine threadtypes. This is none - not defined - for most machine types/subtypes.
+const CPU_THREADTYPE_NONE             = 0 # cpu_threadtype_t
+
+#VAX subtypes (these do *not* necessary conform to the actual cpu ID assigned by DEC available via the SID register).
+const CPU_SUBTYPE_VAX_ALL     = 0
+const CPU_SUBTYPE_VAX780      = 1
+const CPU_SUBTYPE_VAX785      = 2
+const CPU_SUBTYPE_VAX750      = 3
+const CPU_SUBTYPE_VAX730      = 4
+const CPU_SUBTYPE_UVAXI       = 5
+const CPU_SUBTYPE_UVAXII      = 6
+const CPU_SUBTYPE_VAX8200     = 7
+const CPU_SUBTYPE_VAX8500     = 8
+const CPU_SUBTYPE_VAX8600     = 9
+const CPU_SUBTYPE_VAX8650     = 10
+const CPU_SUBTYPE_VAX8800     = 11
+const CPU_SUBTYPE_UVAXIII     = 12
+
+# 680x0 subtypes
+# The subtype definitions here are unusual for historical reasons. NeXT used to consider 68030 code as generic 68000 code. For backwards compatability:
+# CPU_SUBTYPE_MC68030 symbol has been preserved for source code compatability.
+# CPU_SUBTYPE_MC680x0_ALL has been defined to be the same subtype as CPU_SUBTYPE_MC68030 for binary comatability.
+# CPU_SUBTYPE_MC68030_ONLY has been added to allow new object files to be tagged as containing 68030-specific instructions.
+
+const CPU_SUBTYPE_MC680x0_ALL         = 1
+const CPU_SUBTYPE_MC68030             = 1 # compat
+const CPU_SUBTYPE_MC68040             = 2
+const CPU_SUBTYPE_MC68030_ONLY        = 3
+
+# I386 subtypes
+
+CPU_SUBTYPE_INTEL(f, m) = ((f) + ((m) << 4))
+
+const CPU_SUBTYPE_I386_ALL        = CPU_SUBTYPE_INTEL(3, 0)
+const CPU_SUBTYPE_386             = CPU_SUBTYPE_INTEL(3, 0)
+const CPU_SUBTYPE_486             = CPU_SUBTYPE_INTEL(4, 0)
+const CPU_SUBTYPE_486SX           = CPU_SUBTYPE_INTEL(4, 8) # 8 << 4 = 128
+const CPU_SUBTYPE_586             = CPU_SUBTYPE_INTEL(5, 0)
+const CPU_SUBTYPE_PENT            = CPU_SUBTYPE_INTEL(5, 0)
+const CPU_SUBTYPE_PENTPRO         = CPU_SUBTYPE_INTEL(6, 1)
+const CPU_SUBTYPE_PENTII_M3       = CPU_SUBTYPE_INTEL(6, 3)
+const CPU_SUBTYPE_PENTII_M5       = CPU_SUBTYPE_INTEL(6, 5)
+const CPU_SUBTYPE_CELERON         = CPU_SUBTYPE_INTEL(7, 6)
+const CPU_SUBTYPE_CELERON_MOBILE  = CPU_SUBTYPE_INTEL(7, 7)
+const CPU_SUBTYPE_PENTIUM_3       = CPU_SUBTYPE_INTEL(8, 0)
+const CPU_SUBTYPE_PENTIUM_3_M     = CPU_SUBTYPE_INTEL(8, 1)
+const CPU_SUBTYPE_PENTIUM_3_XEON  = CPU_SUBTYPE_INTEL(8, 2)
+const CPU_SUBTYPE_PENTIUM_M       = CPU_SUBTYPE_INTEL(9, 0)
+const CPU_SUBTYPE_PENTIUM_4       = CPU_SUBTYPE_INTEL(10, 0)
+const CPU_SUBTYPE_PENTIUM_4_M     = CPU_SUBTYPE_INTEL(10, 1)
+const CPU_SUBTYPE_ITANIUM         = CPU_SUBTYPE_INTEL(11, 0)
+const CPU_SUBTYPE_ITANIUM_2       = CPU_SUBTYPE_INTEL(11, 1)
+const CPU_SUBTYPE_XEON            = CPU_SUBTYPE_INTEL(12, 0)
+const CPU_SUBTYPE_XEON_MP         = CPU_SUBTYPE_INTEL(12, 1)
+
+CPU_SUBTYPE_INTEL_FAMILY(x)             = ((x) & 15)
+const CPU_SUBTYPE_INTEL_FAMILY_MAX      = 15
+
+CPU_SUBTYPE_INTEL_MODEL(x)              = ((x) >> 4)
+const CPU_SUBTYPE_INTEL_MODEL_ALL       = 0
+
+# X86 subtypes.
+
+const CPU_SUBTYPE_X86_ALL            = 3
+const CPU_SUBTYPE_X86_64_ALL         = 3
+const CPU_SUBTYPE_X86_ARCH1          = 4
+const CPU_SUBTYPE_X86_64_H           = 8      # Haswell feature subset
+
+const CPU_THREADTYPE_INTEL_HTT       = 1 # cpu_thread_type_t
+
+# Mips subtypes.
+
+const CPU_SUBTYPE_MIPS_ALL    =  0
+const CPU_SUBTYPE_MIPS_R2300  =  1
+const CPU_SUBTYPE_MIPS_R2600  =  2
+const CPU_SUBTYPE_MIPS_R2800  =  3
+const CPU_SUBTYPE_MIPS_R2000a =  4     # pmax
+const CPU_SUBTYPE_MIPS_R2000  =  5
+const CPU_SUBTYPE_MIPS_R3000a =  6     # 3max
+const CPU_SUBTYPE_MIPS_R3000  =  7
+
+# MC98000 (PowerPC) subtypes
+const CPU_SUBTYPE_MC98000_ALL = 0
+const CPU_SUBTYPE_MC98601     = 1
+
+# HPPA subtypes for Hewlett-Packard HP-PA family of risc processors. Port by NeXT to 700 series.
+const CPU_SUBTYPE_HPPA_ALL     = 0
+const CPU_SUBTYPE_HPPA_7100    = 0 # compat
+const CPU_SUBTYPE_HPPA_7100LC  = 1
+
+# MC88000 subtypes.
+const CPU_SUBTYPE_MC88000_ALL =  0
+const CPU_SUBTYPE_MC88100     =  1
+const CPU_SUBTYPE_MC88110     =  2
+
+# SPARC subtypes
+const CPU_SUBTYPE_SPARC_ALL   = 0
+
+# I860 subtypes
+const CPU_SUBTYPE_I860_ALL    = 0
+const CPU_SUBTYPE_I860_860    = 1
+
+# PowerPC subtypes
+const CPU_SUBTYPE_POWERPC_ALL    = 0
+const CPU_SUBTYPE_POWERPC_601    = 1
+const CPU_SUBTYPE_POWERPC_602    = 2
+const CPU_SUBTYPE_POWERPC_603    = 3
+const CPU_SUBTYPE_POWERPC_603e   = 4
+const CPU_SUBTYPE_POWERPC_603ev  = 5
+const CPU_SUBTYPE_POWERPC_604    = 6
+const CPU_SUBTYPE_POWERPC_604e   = 7
+const CPU_SUBTYPE_POWERPC_620    = 8
+const CPU_SUBTYPE_POWERPC_750    = 9
+const CPU_SUBTYPE_POWERPC_7400   = 10
+const CPU_SUBTYPE_POWERPC_7450   = 11
+const CPU_SUBTYPE_POWERPC_970    = 100
+
+# ARM subtypes
+const CPU_SUBTYPE_ARM_ALL        = 0
+const CPU_SUBTYPE_ARM_V4T        = 5
+const CPU_SUBTYPE_ARM_V6         = 6
+const CPU_SUBTYPE_ARM_V5TEJ      = 7
+const CPU_SUBTYPE_ARM_XSCALE     = 8
+const CPU_SUBTYPE_ARM_V7         = 9
+const CPU_SUBTYPE_ARM_V7F        = 10 # Cortex A9
+const CPU_SUBTYPE_ARM_V7S        = 11 # Swift
+const CPU_SUBTYPE_ARM_V7K        = 12
+const CPU_SUBTYPE_ARM_V6M        = 14 # Not meant to be run under xnu
+const CPU_SUBTYPE_ARM_V7M        = 15 # Not meant to be run under xnu
+const CPU_SUBTYPE_ARM_V7EM       = 16 # Not meant to be run under xnu
+
+const CPU_SUBTYPE_ARM_V8         = 13
+
+# ARM64 subtypes
+const CPU_SUBTYPE_ARM64_ALL      = 0
+const CPU_SUBTYPE_ARM64_V8       = 1
+const CPU_SUBTYPE_ARM64E         = 2
+
+# CPU subtype feature flags for ptrauth on arm64e platforms
+const CPU_SUBTYPE_ARM64_PTR_AUTH_MASK = 0x0f000000
+CPU_SUBTYPE_ARM64_PTR_AUTH_VERSION(x) = (((x) & CPU_SUBTYPE_ARM64_PTR_AUTH_MASK) >> 24)
+
+#  ARM64_32 subtypes
+const CPU_SUBTYPE_ARM64_32_ALL   = 0
+const CPU_SUBTYPE_ARM64_32_V8    = 1

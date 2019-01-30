@@ -129,6 +129,13 @@ function read_segment_commands(f::IOStream, load_commands_offset::Int64, ncmds::
   end
 end
 
+using Markdown
+# function myshow(io::IO, mime, f::Union{MachHeader, MachHeader64})
+#   t = Markdown.Table([[string(f.flags)]], [:c])
+#   m = Markdown.MD(t)
+#   show(io, mime, m)
+# end
+
 function openFile(filename)
   f = open(filename)
   
@@ -144,6 +151,14 @@ function openFile(filename)
   println(header)
   println(header_filetype_desc(header))
   println(header_flags_desc(header))
+  println(header_cpu_type_desc(header))
+  #TODO: Implement header_cpu_subtype_desc
+  
+  #TODO: Turn this into a function that takes a struct and outputs a table.
+  a = Markdown.MD(Markdown.Table(Any[Any["a", "b"], Any["1", "2"]], [:l, :r]))
+  print(Markdown.plain(a))
+  print(Markdown.rst(a)) # <----- this one has a better table-like look.
+  
   
   # read segment commands
   load_cmds = read_segment_commands(f, offset, header.ncmds, is_swap)
