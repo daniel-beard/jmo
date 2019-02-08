@@ -6,6 +6,7 @@ include("types.jl")
 include("utils.jl")
 
 using ArgParse
+using Markdown
 
 const COMMAND_MAP = Dict(
   LC_UUID => UUIDCommand,
@@ -47,6 +48,19 @@ function read_generic(T, f::IOStream, offset::Int64, is_swap::Bool; first_field_
   end
   meta = MetaStruct(offset, f)
   return Pair(T(fields...), meta)
+end
+
+# -h option, print out the file header
+function opt_read_header(filename)
+  f = open(filename)
+  offset = 0
+  magic = read_magic(f)  
+  is_64 = is_magic_64(magic)
+  is_swap = should_swap_bytes(magic)
+  header_type = is_64 ? MachHeader64 : MachHeader
+  header = read_generic(header_type, f, offset, is_swap, first_field_flip = false).first
+  pprint(header)
+  close(f)
 end
 
 # iostream, offset, header type, ncmds, is_swap
@@ -129,13 +143,7 @@ function read_segment_commands(f::IOStream, load_commands_offset::Int64, ncmds::
   end
 end
 
-using Markdown
-# function myshow(io::IO, mime, f::Union{MachHeader, MachHeader64})
-#   t = Markdown.Table([[string(f.flags)]], [:c])
-#   m = Markdown.MD(t)
-#   show(io, mime, m)
-# end
-
+# Use this for scratch for now
 function openFile(filename)
   f = open(filename)
   
@@ -154,12 +162,6 @@ function openFile(filename)
   println(header_cpu_type_desc(header))
   #TODO: Implement header_cpu_subtype_desc
   
-  #TODO: Turn this into a function that takes a struct and outputs a table.
-  a = Markdown.MD(Markdown.Table(Any[Any["a", "b"], Any["1", "2"]], [:l, :r]))
-  print(Markdown.plain(a))
-  print(Markdown.rst(a)) # <----- this one has a better table-like look.
-  
-  
   # read segment commands
   load_cmds = read_segment_commands(f, offset, header.ncmds, is_swap)
   
@@ -167,30 +169,30 @@ function openFile(filename)
 end
 
 function parse_cli_opts(args) 
-  s = ArgParseSettings(description = "MachO object file viewer")
+  s = ArgParseSettings(description = "MachO object file viewer",
+                      add_help = false)
 
   @add_arg_table s begin
-      "-l"
+      "-h"
         action = :store_true
         help = "Display header"
-      "--opt2", "-o"         # another option, with short form
       "file"                 # a positional argument
+        required = true
+        help = "File to read"
   end
-
-  parsed_args = parse_args(s) # the result is a Dict{String,Any}
-  println("Parsed args:")
-  for (key,val) in parsed_args
-      println("  $key  =>  $(repr(val))")
+  arg_dict = parse_args(s) # the result is a Dict{String,Any}
+  
+  # Handle args
+  if arg_dict["h"] == true 
+    opt_read_header(arg_dict["file"])
   end
 end
 
 # Equivalent to main func
 Base.@ccallable function julia_main(ARGS::Vector{String})::Cint
   parse_cli_opts(ARGS)
-  openFile("/Users/dbeard/Dev/Personal/jmo/Binaries/ObjcThin")
   return 0
 end
-
 julia_main([""])
 
 end # module

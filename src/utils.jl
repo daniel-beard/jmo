@@ -3,6 +3,7 @@ include("types.jl")
 include("constants.jl")
 
 using Printf
+using Markdown
 
 # This file contains helper functions for extracting data from sections / segments.
 
@@ -86,13 +87,50 @@ function read_cstring(startIndex::UInt32, f::IOStream)
   return String(accum)
 end
 
-# Type show implementations
+# Outputs a markdown table
+# Param is an array of alternating titles + values, e.g.
+# ["title1", "val1", "title2", "val2"]
+function printmdtable(titlesAndValues::Array{Any})
+  titles = Any[]
+  values = Any[]
+  for (index, val) in pairs(titlesAndValues)
+    if index % 2 != 0 
+      push!(titles, val)
+    else
+      push!(values, val)
+    end
+  end
+  table = Markdown.MD(Markdown.Table(Any[titles, values], repeat([:c], length(titles))))
+  println(Markdown.rst(table))
+end
+
+# Pretty print implementations
 ####################################
 
-# function Base.show(io::IO, h::Union{MachHeader, MachHeader64})
-#   print(io, "magic\t\tcputype\t\tcpusubtype\tfiletype\tncmds\t\tsizeofcmds\tflags\t\treserved\n")
-#   print(io, "$(repr(h.magic))\t$(h.cputype)\t$(h.cpusubtype)\t$(h.filetype)\t\t$(h.ncmds)\t\t$(h.sizeofcmds)\t\t$(h.flags)\t\t$(h.reserved)\n")
-# end
+function pprint(header::Union{MachHeader, MachHeader64})
+  type = isa(header, MachHeader) ? "MachHeader" : "MachHeader64"
+  println(type)
+  t = Any[]
+  push!(t, "magic", @sprintf("0x%0x", header.magic))
+  push!(t, "cputype", header_cpu_type_desc(header))
+  push!(t, "cpusubtype", @sprintf("0x%0x", header.cpusubtype))
+  push!(t, "filetype", header_filetype_desc(header))
+  push!(t, "ncmds", @sprintf("%d", header.ncmds))
+  push!(t, "sizeofcmds", @sprintf("%d", header.sizeofcmds))
+  push!(t, "flags", header_flags_desc(header))
+  if isa(header, MachHeader64)
+    push!(t, "reserved", @sprintf("%d", header.reserved))
+  end
+  printmdtable(t)
+end
+
+# Base.show implementations
+####################################
+
+function Base.show(io::IO, h::Union{MachHeader, MachHeader64})
+  print(io, "magic\t\tcputype\t\tcpusubtype\tfiletype\tncmds\t\tsizeofcmds\tflags\t\treserved\n")
+  print(io, "$(repr(h.magic))\t$(h.cputype)\t$(h.cpusubtype)\t$(h.filetype)\t\t$(h.ncmds)\t\t$(h.sizeofcmds)\t\t$(h.flags)\t\t$(h.reserved)\n")
+end
 
 function Base.show(io::IO, uuid::Pair{UUIDCommand, MetaStruct})
   uuid = uuid.first
