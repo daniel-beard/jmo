@@ -8,6 +8,8 @@ include("utils.jl")
 using ArgParse
 using Markdown
 
+const VERSION = "0.0.1"
+
 const COMMAND_MAP = Dict(
   LC_UUID => UUIDCommand,
   LC_SEGMENT => SegmentCommand,
@@ -169,13 +171,21 @@ function openFile(filename)
 end
 
 function parse_cli_opts(args) 
-  s = ArgParseSettings(description = "MachO object file viewer",
-                      add_help = false)
+  s = ArgParseSettings(description = "MachO object file viewer", version = VERSION, add_version = true)
 
   @add_arg_table s begin
-      "-h"
+      "--header", "-d"
         action = :store_true
-        help = "Display header"
+        help = "display header"
+      "--ls", "-c"
+        help = "show load commands summary"
+        action = :store_true
+      "--shared-libs", "-L"
+        help = "show names and version numbers of the shared libraries that the object file uses."
+        action = :store_true
+      "--objc-classes"
+        help = "lists names of objective-c classes that exist in the object file"
+        action = :store_true
       "file"                 # a positional argument
         required = true
         help = "File to read"
@@ -183,8 +193,14 @@ function parse_cli_opts(args)
   arg_dict = parse_args(s) # the result is a Dict{String,Any}
   
   # Handle args
-  if arg_dict["h"] == true 
+  if arg_dict["header"] == true 
     opt_read_header(arg_dict["file"])
+  elseif arg_dict["ls"] == true
+    #TODO: Implement me
+  elseif arg_dict["shared-libs"] == true
+    #TODO: Implement me
+  elseif arg_dict["objc-classes"] == true
+    #TODO: Implement me
   end
 end
 
@@ -193,6 +209,7 @@ Base.@ccallable function julia_main(ARGS::Vector{String})::Cint
   parse_cli_opts(ARGS)
   return 0
 end
+# Comment out when compiling to binary.
 julia_main([""])
 
 end # module
