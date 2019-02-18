@@ -7,6 +7,21 @@ struct MetaStruct
   f::IOStream
 end
 
+# Note: All values in fat headers are big endian
+struct FatHeader
+  magic::UInt32
+  nfat_arch::UInt32
+end
+
+# Note: All values in fat archs are big endian
+struct FatArch
+  cputype::UInt32
+  cpusubtype::UInt32
+  offset::UInt32
+  size::UInt32
+  align::UInt32
+end
+
 struct MachHeader
   magic::UInt32
   cputype::UInt32

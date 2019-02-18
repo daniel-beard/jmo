@@ -26,6 +26,10 @@ function read_magic(f::IOStream)
   read(f, UInt32)
 end
 
+function is_magic_fat(magic::UInt32)
+  magic == FAT_MAGIC || magic == FAT_CIGAM
+end
+
 function is_magic_64(magic::UInt32)
   magic == MH_MAGIC_64 || magic == MH_CIGAM_64
 end
@@ -52,11 +56,62 @@ function read_generic(T, f::IOStream, offset::Int64, is_swap::Bool; first_field_
   return Pair(T(fields...), meta)
 end
 
+# Read a fat header
+# Returns a list containing the fat header, then the fat arch types.
+function read_fat_header(f::IOStream, offset::Int64, magic::UInt32)
+  # Fat files are always treated as BigEndian
+  current_arch_little_endian = Base.ENDIAN_BOM == 0x04030201
+  is_swap = current_arch_little_endian
+  result = Any[]
+  seek(f, offset)
+  T = FatHeader
+  nfields = fieldcount(T)
+  fields = Any[]
+  for i = 1:nfields
+    field = is_swap ? bswap(read(f, fieldtype(T, i))) : read(f, fieldtype(T, i))
+    push!(fields, field)
+  end
+  fat_header = T(fields...)
+  push!(result, fat_header)
+  for n in 1:fat_header.nfat_arch
+    T = FatArch
+    nfields = fieldcount(T)
+    fields = Any[]
+    for i = 1:nfields
+      field = is_swap ? bswap(read(f, fieldtype(T, i))) : read(f, fieldtype(T, i))
+      push!(fields, field)
+    end
+    push!(result, T(fields...))
+  end
+  result
+end
+
+# Tests that a file has the correct magic value, or detects if the file is a fat file.
+# Since we don't yet support fat files, print the summary and exit.
+function check_file_is_valid(filename)
+  f = open(filename)
+  offset = 0
+  magic = read_magic(f)
+  # Handle fat files and exit
+  if is_magic_fat(magic)
+    fat_headers = read_fat_header(f, 0, magic)
+    map(x->pprint(x), fat_headers)
+    println("jmo doesn't currently support FAT files, to use with this utility, extract a slice using `lipo`")
+    exit(1)
+  end
+  # Check non machO file
+  if in(magic, [MH_MAGIC, MH_MAGIC_64, MH_CIGAM, MH_CIGAM_64]) == false 
+    println("This is not a valid machO file! Aborting!")
+    exit(2)
+  end
+  close(f)
+end
+
 # -h option, print out the file header
 function opt_read_header(filename)
   f = open(filename)
   offset = 0
-  magic = read_magic(f)  
+  magic = read_magic(f)
   is_64 = is_magic_64(magic)
   is_swap = should_swap_bytes(magic)
   header_type = is_64 ? MachHeader64 : MachHeader
@@ -191,10 +246,17 @@ function parse_cli_opts(args)
         help = "File to read"
   end
   arg_dict = parse_args(s) # the result is a Dict{String,Any}
+  filename = arg_dict["file"]
+  
+  # TODO: Could in future have a 'read_headers' method here as part of setup
+  # Then each opt_* method can map over the headers passed to it, or we could filter by an -arch option.
+  
+  # Check that this is a file we can read
+  check_file_is_valid(filename)
   
   # Handle args
   if arg_dict["header"] == true 
-    opt_read_header(arg_dict["file"])
+    opt_read_header(filename)
   elseif arg_dict["ls"] == true
     #TODO: Implement me
   elseif arg_dict["shared-libs"] == true

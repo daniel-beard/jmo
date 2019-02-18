@@ -42,8 +42,8 @@ function header_flags_desc(header::Union{MachHeader, MachHeader64})
   join(sort(descriptions), '|')
 end
 
-# Returns a string description of the CPU architecture, from a mach header
-function header_cpu_type_desc(header::Union{MachHeader, MachHeader64})
+# Returns a string description of the CPU architecture, from a mach header or fat arch header.
+function header_cpu_type_desc(header::Union{MachHeader, MachHeader64, FatArch})
   cpu_types[header.cputype]
 end
 
@@ -121,6 +121,25 @@ function pprint(header::Union{MachHeader, MachHeader64})
   if isa(header, MachHeader64)
     push!(t, "reserved", @sprintf("%d", header.reserved))
   end
+  printmdtable(t)
+end
+
+function pprint(fatHeader::FatHeader)
+  println("FatHeader")
+  t = Any[]
+  push!(t, "magic", @sprintf("0x%0x", fatHeader.magic))
+  push!(t, "nfat_arch", @sprintf("%d", fatHeader.nfat_arch))
+  printmdtable(t)
+end
+
+function pprint(fatArch::FatArch)
+  println("FatArch")
+  t = Any[]
+  push!(t, "cputype", header_cpu_type_desc(fatArch))
+  push!(t, "cpusubtype", @sprintf("0x%0x", fatArch.cpusubtype))
+  push!(t, "offset", @sprintf("0x%0x", fatArch.offset))
+  push!(t, "size", @sprintf("%d", fatArch.size))
+  push!(t, "align", @sprintf("%d", fatArch.align))
   printmdtable(t)
 end
 
