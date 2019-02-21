@@ -47,6 +47,28 @@ function header_cpu_type_desc(header::Union{MachHeader, MachHeader64, FatArch})
   cpu_types[header.cputype]
 end
 
+# Returns a string description of the CPU subtype, from a mach header
+function header_cpu_subtype_desc(header::Union{MachHeader, MachHeader64})
+  arch_to_subtype_map = Dict(
+    CPU_TYPE_VAX => cpu_subtypes_vax,
+    CPU_TYPE_MC680x0 => cpu_subtypes_mc680,
+    CPU_TYPE_I386 => cpu_subtypes_i386,
+    CPU_TYPE_X86_64 => cpu_subtypes_x86_64,
+    CPU_TYPE_MC98000 => cpu_subtypes_mc98000,
+    CPU_TYPE_HPPA => cpu_subtypes_hppa,
+    CPU_TYPE_ARM => cpu_subtypes_arm,
+    CPU_TYPE_ARM64 => cpu_subtypes_arm64,
+    CPU_TYPE_ARM64_32 => cpu_subtypes_arm64_32, 
+    CPU_TYPE_MC88000 => cpu_subtypes_mc88000,
+    CPU_TYPE_SPARC => cpu_subtypes_sparc,
+    CPU_TYPE_I860 => cpu_subtypes_i860,
+    CPU_TYPE_POWERPC => cpu_subtypes_powerpc)
+    #TODO: Add some handling for not found values, fallback to an "unknown" desc.
+  subtype_map = arch_to_subtype_map[header.cputype] 
+  subtype = subtype_map[header.cpusubtype & ~CPU_SUBTYPE_MASK]
+  subtype
+end
+
 # Returns section type as string from section flags
 # e.g. "S_REGULAR"
 function section_type_desc(section::Union{Section, Section64})
@@ -113,14 +135,11 @@ function pprint(header::Union{MachHeader, MachHeader64})
   t = Any[]
   push!(t, "magic", @sprintf("0x%0x", header.magic))
   push!(t, "cputype", header_cpu_type_desc(header))
-  push!(t, "cpusubtype", @sprintf("0x%0x", header.cpusubtype))
+  push!(t, "cpusubtype", header_cpu_subtype_desc(header))
   push!(t, "filetype", header_filetype_desc(header))
   push!(t, "ncmds", @sprintf("%d", header.ncmds))
   push!(t, "sizeofcmds", @sprintf("%d", header.sizeofcmds))
   push!(t, "flags", header_flags_desc(header))
-  if isa(header, MachHeader64)
-    push!(t, "reserved", @sprintf("%d", header.reserved))
-  end
   printmdtable(t)
 end
 

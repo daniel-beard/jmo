@@ -10,17 +10,6 @@ using Markdown
 
 const VERSION = "0.0.1"
 
-const COMMAND_MAP = Dict(
-  LC_UUID => UUIDCommand,
-  LC_SEGMENT => SegmentCommand,
-  LC_SEGMENT_64 => SegmentCommand64,
-  LC_LOAD_DYLIB => DylibCommand,
-  LC_VERSION_MIN_IPHONEOS => VersionMinCommand,
-  LC_VERSION_MIN_MACOSX => VersionMinCommand,
-  LC_VERSION_MIN_TVOS => VersionMinCommand,
-  LC_VERSION_MIN_WATCHOS => VersionMinCommand,
-)
-
 function read_magic(f::IOStream)
   seekstart(f)
   read(f, UInt32)
@@ -109,15 +98,8 @@ end
 
 # -h option, print out the file header
 function opt_read_header(filename)
-  f = open(filename)
-  offset = 0
-  magic = read_magic(f)
-  is_64 = is_magic_64(magic)
-  is_swap = should_swap_bytes(magic)
-  header_type = is_64 ? MachHeader64 : MachHeader
-  header = read_generic(header_type, f, offset, is_swap, first_field_flip = false).first
+  f, is_64, is_swap, header = read_header(filename)
   pprint(header)
-  close(f)
 end
 
 # iostream, offset, header type, ncmds, is_swap
@@ -168,11 +150,11 @@ function read_segment_commands(f::IOStream, load_commands_offset::Int64, ncmds::
       # Load using the lookup map
     else 
       # Do we have a match? 
-      if haskey(COMMAND_MAP, load_cmd.cmd)
-        load_type = COMMAND_MAP[load_cmd.cmd]
-        command = read_generic(load_type, f, actual_offset, is_swap)
-        println(command)
-      end
+      # if haskey(COMMAND_MAP, load_cmd.cmd)
+      #   load_type = COMMAND_MAP[load_cmd.cmd]
+      #   command = read_generic(load_type, f, actual_offset, is_swap)
+      #   println(command)
+      # end
     end
       
     # elseif load_cmd.cmd == LC_SEGMENT
@@ -200,36 +182,34 @@ function read_segment_commands(f::IOStream, load_commands_offset::Int64, ncmds::
   end
 end
 
-# Use this for scratch for now
-function openFile(filename)
+# Reads a header, returning an IOStream, is_64, is_swap, and a header.
+function read_header(filename)
   f = open(filename)
-  
   offset = 0
   magic = read_magic(f)  
   is_64 = is_magic_64(magic)
   is_swap = should_swap_bytes(magic)
-  
-  # read the header
   header_type = is_64 ? MachHeader64 : MachHeader
   header = read_generic(header_type, f, offset, is_swap, first_field_flip = false).first
-  offset += sizeof(header)
-  println(header)
-  println(header_filetype_desc(header))
-  println(header_flags_desc(header))
-  println(header_cpu_type_desc(header))
-  #TODO: Implement header_cpu_subtype_desc
-  
-  # read segment commands
-  load_cmds = read_segment_commands(f, offset, header.ncmds, is_swap)
-  
-  close(f)
+  return f, is_64, is_swap, header
+
+  #TODO: Remove this eventually
+  # offset += sizeof(header)
+  # println(header)
+  # println(header_filetype_desc(header))
+  # println(header_flags_desc(header))
+  # println(header_cpu_type_desc(header))
+  # #TODO: Implement header_cpu_subtype_desc
+  # # read segment commands
+  # # load_cmds = read_segment_commands(f, offset, header.ncmds, is_swap)
+  # close(f)
 end
 
 function parse_cli_opts(args) 
-  s = ArgParseSettings(description = "MachO object file viewer", version = VERSION, add_version = true)
+  s = ArgParseSettings(description = "MachO object file viewer", version = VERSION, add_version = true, add_help = false)
 
   @add_arg_table s begin
-      "--header", "-d"
+      "--header", "-h"
         action = :store_true
         help = "display header"
       "--ls", "-c"
