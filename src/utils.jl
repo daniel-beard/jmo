@@ -200,7 +200,7 @@ function Base.show(io::IO, dylib::Pair{DylibCommand, MetaStruct})
   (dylib, meta) = dylib
   offset = UInt32(meta.offset + dylib.name)
   name = read_cstring(offset, meta.f)
-  println(io, "LC_LOAD_DYLIB:")
-  println(io, name)
-  # TODO: Print out the rest of the fields here. Should I introduce a verbose flag for fields I don't really care about?
+  compat_version = version_desc(dylib.compatibility_version)
+  curr_version = version_desc(dylib.current_version)
+  print(io, "\t$(name) (compatibility version $(compat_version), current version $(curr_version))")
 end

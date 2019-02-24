@@ -102,7 +102,7 @@ function opt_read_header(filename)
   pprint(header)
 end
 
-# -ls option, print out the names of all Load Cmds.
+# --ls option, print out the names of all Load Cmds.
 function opt_load_cmd_ls(filename)
   f, offset, is_64, is_swap, header = read_header(filename)
   offset += sizeof(header)
@@ -114,6 +114,20 @@ function opt_load_cmd_ls(filename)
   end
   println("Load Commands:")
   map(lc->load_cmd_desc(lc) |> println, commands)
+end
+
+# -L option, print out the dylibs that this object file uses
+function opt_shared_libs(filename)
+  f, offset, is_64, is_swap, header = read_header(filename)
+  offset += sizeof(header)
+  for i = 1:header.ncmds
+    load_cmd = read_generic(LoadCommand, f, offset, is_swap).first
+    if load_cmd.cmd == LC_LOAD_DYLIB
+      dylib = read_generic(DylibCommand, f, offset, is_swap)
+      println(dylib)
+    end
+    offset += load_cmd.cmdsize
+  end
 end
 
 # iostream, offset, header type, ncmds, is_swap
@@ -243,7 +257,7 @@ function parse_cli_opts(args)
   elseif arg_dict["ls"] == true
     opt_load_cmd_ls(filename)
   elseif arg_dict["shared-libs"] == true
-    #TODO: Implement me
+    opt_shared_libs(filename)
   elseif arg_dict["objc-classes"] == true
     #TODO: Implement me
   end
