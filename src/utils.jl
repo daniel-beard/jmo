@@ -69,6 +69,11 @@ function header_cpu_subtype_desc(header::Union{MachHeader, MachHeader64})
   subtype
 end
 
+# Returns a string description of a load command or, '???' with the hex value.
+function load_cmd_desc(lc::LoadCommand)
+  get(load_commands, lc.cmd, @sprintf("??? 0x%0x", lc.cmd))
+end
+
 # Returns section type as string from section flags
 # e.g. "S_REGULAR"
 function section_type_desc(section::Union{Section, Section64})
@@ -164,6 +169,10 @@ end
 
 # Base.show implementations
 ####################################
+
+function Base.show(io::IO, lc::LoadCommand)
+  println(io, load_cmd_desc(lc))
+end
 
 function Base.show(io::IO, h::Union{MachHeader, MachHeader64})
   print(io, "magic\t\tcputype\t\tcpusubtype\tfiletype\tncmds\t\tsizeofcmds\tflags\t\treserved\n")

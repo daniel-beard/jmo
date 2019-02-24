@@ -98,8 +98,22 @@ end
 
 # -h option, print out the file header
 function opt_read_header(filename)
-  f, is_64, is_swap, header = read_header(filename)
+  f, offset, is_64, is_swap, header = read_header(filename)
   pprint(header)
+end
+
+# -ls option, print out the names of all Load Cmds.
+function opt_load_cmd_ls(filename)
+  f, offset, is_64, is_swap, header = read_header(filename)
+  offset += sizeof(header)
+  commands = LoadCommand[]
+  for i = 1:header.ncmds
+    load_cmd = read_generic(LoadCommand, f, offset, is_swap).first
+    push!(commands, load_cmd)
+    offset += load_cmd.cmdsize
+  end
+  println("Load Commands:")
+  map(lc->load_cmd_desc(lc) |> println, commands)
 end
 
 # iostream, offset, header type, ncmds, is_swap
@@ -182,7 +196,7 @@ function read_segment_commands(f::IOStream, load_commands_offset::Int64, ncmds::
   end
 end
 
-# Reads a header, returning an IOStream, is_64, is_swap, and a header.
+# Reads a header, returning an IOStream, offset, is_64, is_swap, and a header.
 function read_header(filename)
   f = open(filename)
   offset = 0
@@ -191,18 +205,7 @@ function read_header(filename)
   is_swap = should_swap_bytes(magic)
   header_type = is_64 ? MachHeader64 : MachHeader
   header = read_generic(header_type, f, offset, is_swap, first_field_flip = false).first
-  return f, is_64, is_swap, header
-
-  #TODO: Remove this eventually
-  # offset += sizeof(header)
-  # println(header)
-  # println(header_filetype_desc(header))
-  # println(header_flags_desc(header))
-  # println(header_cpu_type_desc(header))
-  # #TODO: Implement header_cpu_subtype_desc
-  # # read segment commands
-  # # load_cmds = read_segment_commands(f, offset, header.ncmds, is_swap)
-  # close(f)
+  return f, offset, is_64, is_swap, header
 end
 
 function parse_cli_opts(args) 
@@ -238,7 +241,7 @@ function parse_cli_opts(args)
   if arg_dict["header"] == true 
     opt_read_header(filename)
   elseif arg_dict["ls"] == true
-    #TODO: Implement me
+    opt_load_cmd_ls(filename)
   elseif arg_dict["shared-libs"] == true
     #TODO: Implement me
   elseif arg_dict["objc-classes"] == true
