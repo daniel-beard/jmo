@@ -127,6 +127,23 @@ function opt_uuid(filename)
   end
 end
 
+function opt_min_sdk(filename)
+  f, offset, is_64, is_swap, header_meta = read_header(filename)
+  header = header_meta.first
+  offset += sizeof(header)
+  for i = 1:header.ncmds
+    load_cmd = read_generic(LoadCommand, f, offset, is_swap).first
+    if in(load_cmd.cmd, [LC_VERSION_MIN_MACOSX, LC_VERSION_MIN_IPHONEOS, LC_VERSION_MIN_WATCHOS, LC_VERSION_MIN_TVOS])
+      version_min = read_generic(VersionMinCommand, f, offset, is_swap).first
+      println(load_commands[load_cmd.cmd])
+      println("Loaded version min: $(version_min.version) $(version_min.sdk)")  
+      println("version: $(version_desc(version_min.version))")
+      println("sdk: $(version_desc(version_min.sdk))")
+    end
+    offset += load_cmd.cmdsize
+  end
+end
+
 function parse_cli_opts(args) 
   s = ArgParseSettings(description = "MachO object file viewer", version = VERSION, add_version = true, add_help = false)
 
@@ -145,6 +162,9 @@ function parse_cli_opts(args)
         action = :store_true
       "--disassemble"
         help = "Disassemble the __TEXT section"
+        action = :store_true
+      "--min-sdk"
+        help = "Show the deployment target the binary was compiled for"
         action = :store_true
       "--uuid"
         help = "Print the 128-bit UUID for an image or its corresponding dSYM file."
@@ -178,6 +198,8 @@ function parse_cli_opts(args)
     opt_disassemble(filename)
   elseif arg_dict["uuid"] == true
     opt_uuid(filename)
+  elseif arg_dict["min-sdk"] == true
+    opt_min_sdk(filename)
   end
 end
 

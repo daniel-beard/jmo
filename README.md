@@ -8,8 +8,8 @@ I'm adding new commands as I require them.
 
 ```
 $ julia src/jmo.jl --help
-usage: jmo.jl [-h] [-c] [-L] [--objc-classes] [--disassemble] [--uuid]
-              [--help] [--version] file
+usage: jmo.jl [-h] [-c] [-L] [--objc-classes] [--disassemble]
+              [--min-sdk] [--uuid] [--help] [--version] file
 
 MachO object file viewer
 
@@ -24,6 +24,8 @@ optional arguments:
   --objc-classes     lists names of objective-c classes that exist in
                      the object file
   --disassemble      Disassemble the __TEXT section
+  --min-sdk          Show the deployment target the binary was
+                     compiled for
   --uuid             Print the 128-bit UUID for an image or its
                      corresponding dSYM file.
   --help             Show help
@@ -152,4 +154,14 @@ Ptr{Nothing} @0x0000000121493100
 $ julia src/jmo.jl --uuid ~/ObjcThin
 LC_UUID:
 07DF0928-1403-37A6-9B9B-7186FA400CBB
+```
+
+'--min-sdk example'
+
+```
+$ julia src/jmo.jl --min-sdk ~/ObjcThin
+LC_VERSION_MIN_MACOSX
+Loaded version min: 658688 658944
+version: 10.13.0
+sdk: 10.14.0
 ```
