@@ -16,5 +16,5 @@ steps:
     displayName: 'Symbolic link julia into /usr/local/bin/julia'
   - bash: julia scripts/install_packages.jl
     displayName: 'Install dependencies'
-  - bash: julia src/jmo.jl --help
-    displayName: 'Call help for now.'
+  - bash: julia src/jmo.jl -h Binaries/ObjcThin
+    displayName: 'Show header of ObjcThin binary'
