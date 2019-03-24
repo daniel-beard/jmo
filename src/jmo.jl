@@ -112,6 +112,21 @@ function opt_disassemble(filename)
   end
 end
 
+function opt_uuid(filename)
+  f, offset, is_64, is_swap, header_meta = read_header(filename)
+  header = header_meta.first
+  offset += sizeof(header)
+  for i = 1:header.ncmds
+    load_cmd = read_generic(LoadCommand, f, offset, is_swap).first
+    if load_cmd.cmd == LC_UUID
+      uuid = read_generic(UUIDCommand, f, offset, is_swap)
+      println(uuid)
+      exit(0)
+    end
+    offset += load_cmd.cmdsize
+  end
+end
+
 function parse_cli_opts(args) 
   s = ArgParseSettings(description = "MachO object file viewer", version = VERSION, add_version = true, add_help = false)
 
@@ -130,6 +145,9 @@ function parse_cli_opts(args)
         action = :store_true
       "--disassemble"
         help = "Disassemble the __TEXT section"
+        action = :store_true
+      "--uuid"
+        help = "Print the 128-bit UUID for an image or its corresponding dSYM file."
         action = :store_true
       "--help"
         help = "Show help"
@@ -158,6 +176,8 @@ function parse_cli_opts(args)
     opt_objc_classnames(filename)
   elseif arg_dict["disassemble"] == true
     opt_disassemble(filename)
+  elseif arg_dict["uuid"] == true
+    opt_uuid(filename)
   end
 end
 

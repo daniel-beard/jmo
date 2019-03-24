@@ -8,24 +8,27 @@ I'm adding new commands as I require them.
 
 ```
 $ julia src/jmo.jl --help
-usage: jmo.jl [--help] [-h] [-c] [-L] [--objc-classes]
-              [--objc-header-dump] [--version] file
+usage: jmo.jl [-h] [-c] [-L] [--objc-classes] [--disassemble] [--uuid]
+              [--help] [--version] file
 
 MachO object file viewer
 
 positional arguments:
-  file                File to read
+  file               File to read
 
 optional arguments:
-  --help
-  -h, --header        display header
-  -c, --ls            show load commands summary
-  -L, --shared-libs   show names and version numbers of the shared
-                      libraries that the object file uses.
-  --objc-classes      lists names of objective-c classes that exist in
-                      the object file
-  --disassemble       Disassemble the __TEXT section
-  --version           show version information and exit
+  -h, --header       display header
+  -c, --ls           show load commands summary
+  -L, --shared-libs  show names and version numbers of the shared
+                     libraries that the object file uses.
+  --objc-classes     lists names of objective-c classes that exist in
+                     the object file
+  --disassemble      Disassemble the __TEXT section
+  --uuid             Print the 128-bit UUID for an image or its
+                     corresponding dSYM file.
+  --help             Show help
+  --version          show version information and exit
+
 ```
 
 ## Usage Examples
@@ -141,4 +144,12 @@ $ julia src/jmo.jl --disassemble Binaries/ObjcThin
 0x100000ee0:    pop             rbp
 0x100000ee1:    ret
 Ptr{Nothing} @0x0000000121493100
+```
+
+'--uuid example'
+
+```
+$ julia src/jmo.jl --uuid ~/ObjcThin
+LC_UUID:
+07DF0928-1403-37A6-9B9B-7186FA400CBB
 ```
