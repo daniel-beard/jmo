@@ -6,6 +6,7 @@ include("types.jl")
 include("utils.jl")
 include("read.jl")
 include("iterators.jl")
+include("disassemble.jl")
 
 using ArgParse
 using Markdown
@@ -97,6 +98,19 @@ function opt_objc_classnames(filename)
   end
 end
 
+function opt_disassemble(filename)
+  f, offset, is_64, is_swap, header_meta = read_header(filename)
+  for segment_pair in SegmentIterator(header_meta, is_64, is_swap)
+    segment = segment_pair.first
+    for section_pair in SectionIterator(segment_pair, is_64, is_swap)
+      section = section_pair.first
+      if occursin("__TEXT", String(section.segname)) && occursin("__text", String(section.sectname))
+        dissassemble(section.offset, section.size, section.addr, f)
+      end
+    end
+  end
+end
+
 function parse_cli_opts(args) 
   s = ArgParseSettings(description = "MachO object file viewer", version = VERSION, add_version = true, add_help = false)
 
@@ -112,6 +126,9 @@ function parse_cli_opts(args)
         action = :store_true
       "--objc-classes"
         help = "lists names of objective-c classes that exist in the object file"
+        action = :store_true
+      "--disassemble"
+        help = "Disassemble the __TEXT section"
         action = :store_true
       "file"                 # a positional argument
         required = true
@@ -135,6 +152,8 @@ function parse_cli_opts(args)
     opt_shared_libs(filename)
   elseif arg_dict["objc-classes"] == true
     opt_objc_classnames(filename)
+  elseif arg_dict["disassemble"] == true
+    opt_disassemble(filename)
   end
 end
 
