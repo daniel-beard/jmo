@@ -1,4 +1,5 @@
-# jmo
+# jmo 
+[![Build Status](https://dev.azure.com/danielbeard0/danielbeard0/_apis/build/status/daniel-beard.jmo?branchName=master)](https://dev.azure.com/danielbeard0/danielbeard0/_build/latest?definitionId=3&branchName=master)
 
 Julia MachO file parser. Very experimental, do not use in production anywhere for now.
 I'm adding new commands as I require them.
