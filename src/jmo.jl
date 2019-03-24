@@ -106,6 +106,7 @@ function opt_disassemble(filename)
       section = section_pair.first
       if occursin("__TEXT", String(section.segname)) && occursin("__text", String(section.sectname))
         dissassemble(section.offset, section.size, section.addr, f)
+        exit(0)
       end
     end
   end
