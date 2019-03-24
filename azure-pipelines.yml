@@ -14,5 +14,7 @@ steps:
     displayName: 'Download JuliaLang'
   - bash: sudo ln -s "$(pwd)"/julia/julia-1.1.0/bin/julia /usr/local/bin/julia
     displayName: 'Symbolic link julia into /usr/local/bin/julia'
+  - bash: julia script/install_packages.jl
+    displayName: 'Install dependencies'
   - bash: julia src/jmo.jl --help
     displayName: 'Call help for now.'
