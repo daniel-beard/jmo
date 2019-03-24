@@ -11,7 +11,7 @@ include("disassemble.jl")
 using ArgParse
 using Markdown
 
-const VERSION = "0.0.1"
+const VERSION = "0.0.2"
 
 function is_magic_fat(magic::UInt32)
   magic == FAT_MAGIC || magic == FAT_CIGAM
@@ -131,6 +131,9 @@ function parse_cli_opts(args)
       "--disassemble"
         help = "Disassemble the __TEXT section"
         action = :store_true
+      "--help"
+        help = "Show help"
+        action = :show_help
       "file"                 # a positional argument
         required = true
         help = "File to read"
