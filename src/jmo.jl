@@ -134,11 +134,7 @@ function opt_min_sdk(filename)
   for i = 1:header.ncmds
     load_cmd = read_generic(LoadCommand, f, offset, is_swap).first
     if in(load_cmd.cmd, [LC_VERSION_MIN_MACOSX, LC_VERSION_MIN_IPHONEOS, LC_VERSION_MIN_WATCHOS, LC_VERSION_MIN_TVOS])
-      version_min = read_generic(VersionMinCommand, f, offset, is_swap).first
-      println(load_commands[load_cmd.cmd])
-      println("Loaded version min: $(version_min.version) $(version_min.sdk)")  
-      println("version: $(version_desc(version_min.version))")
-      println("sdk: $(version_desc(version_min.sdk))")
+      read_generic(VersionMinCommand, f, offset, is_swap) |> println
     end
     offset += load_cmd.cmdsize
   end
