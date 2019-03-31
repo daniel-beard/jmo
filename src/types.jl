@@ -173,5 +173,32 @@ struct SymtabCommand
   strsize::UInt32   # string table size in bytes
 end
 
-
+# Contains file offsets and sizes of information dyld needs to load the image.
+# All info is encoded using byte streams, no endian swapping is needed.
+struct DyldInfoCommand
+  cmd::UInt32             # LC_DYLD_INFO or LC_DYLD_INFO_ONLY
+  cmdsize::UInt32         # sizeof(DyldInfoCommand)
+  # Dyld rebases an image whenever dyld loads it at an address different from its preferred address.  
+  # The rebase information is a stream of byte sized opcodes whose symbolic names start with REBASE_OPCODE_.
+  rebase_off::UInt32      # file offset to rebase info
+  rebase_size::UInt32     # size of rebase info
+  # Dyld binds an image during the loading process, if the image requires any pointers to be initialized to symbols in other images.  
+  # The bind information is a stream of byte sized opcodes whose symbolic names start with BIND_OPCODE_.
+  bind_off::UInt32        # file offset to binding info
+  bind_size::UInt32       # size of binding info
+  # Some C++ programs require dyld to unique symbols so that all images in the process use the same copy of some code/data.
+  # This step is done after binding. The content of the weak_bind info is an opcode stream like the bind_info.  But it is sorted alphabetically by symbol name.  
+  # This enable dyld to walk all images with weak binding information in order and look for collisions.  If there are no collisions, dyld does no updating.  That means that some fixups are also encoded in the bind_info. 
+  weak_bind_off::UInt32   # file offset to weak binding info
+  weak_bind_size::UInt32  # size of weak binding info
+  # Some uses of external symbols do not need to be bound immediately. Instead they can be lazily bound on first use.  The lazy_bind
+  # are contains a stream of BIND opcodes to bind all lazy symbols.
+  lazy_bind_off::UInt32   # file offset to lazy binding info
+  lazy_bind_size::UInt32  # size of lazy binding info
+  # The symbols exported by a dylib are encoded in a trie.  This is a compact representation that factors out common prefixes.
+  # It also reduces LINKEDIT pages in RAM because it encodes all information (name, address, flags) in one small, contiguous range.
+  # The export area is a stream of nodes.  The first node sequentially is the start node for the trie.  
+  export_off::UInt32      # file offset to lazy binding info
+  export_size::UInt32     # size of lazy binding info
+end
 
