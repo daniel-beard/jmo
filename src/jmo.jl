@@ -13,18 +13,6 @@ using Markdown
 
 const VERSION = "0.0.2"
 
-function is_magic_fat(magic::UInt32)
-  magic == FAT_MAGIC || magic == FAT_CIGAM
-end
-
-function is_magic_64(magic::UInt32)
-  magic == MH_MAGIC_64 || magic == MH_CIGAM_64
-end
-
-function should_swap_bytes(magic::UInt32)
-  magic == MH_CIGAM || magic == MH_CIGAM_64
-end
-
 # Tests that a file has the correct magic value, or detects if the file is a fat file.
 # Since we don't yet support fat files, print the summary and exit.
 function check_file_is_valid(filename)

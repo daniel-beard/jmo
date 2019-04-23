@@ -9,6 +9,18 @@ function read_magic(f::IOStream)
   read(f, UInt32)
 end
 
+function is_magic_fat(magic::UInt32)
+  magic == FAT_MAGIC || magic == FAT_CIGAM
+end
+
+function is_magic_64(magic::UInt32)
+  magic == MH_MAGIC_64 || magic == MH_CIGAM_64
+end
+
+function should_swap_bytes(magic::UInt32)
+  magic == MH_CIGAM || magic == MH_CIGAM_64
+end
+
 # Generic read function, returns a Pair containing the type T and a meta struct that contains some 
 # meta info like offset and IOStream
 function read_generic(T, f::IOStream, offset::Int64, is_swap::Bool; first_field_flip = true)::Pair{T, MetaStruct}
@@ -164,4 +176,65 @@ function read_segment_commands(f::IOStream, load_commands_offset::Int64, ncmds::
     # end
     actual_offset += load_cmd.cmdsize
   end
+end
+
+#====================================================================#
+# Encodings
+#====================================================================#
+
+# https://en.wikipedia.org/wiki/LEB128
+# MSB ------------------ LSB
+#       10011000011101100101  In raw binary
+#      010011000011101100101  Padded to a multiple of 7 bits
+#  0100110  0001110  1100101  Split into 7-bit groups
+# 00100110 10001110 11100101  Add high 1 bits on all but last (most significant) group to form bytes
+#     0x26     0x8E     0xE5  In hexadecimal
+# → 0xE5 0x8E 0x26            Output stream (LSB to MSB)
+function uleb128encode(value::UInt64; padTo=0)
+  val = value
+  result = UInt8[]
+  while val != 0
+    byte = UInt8(val & 0x7f)
+    val >>= 7
+    if val != 0 || padTo != 0
+      byte |= 0x80 # mark this byte that more bytes will follow.
+    end
+    push!(result, byte)
+  end
+  result
+end
+
+# https://en.wikipedia.org/wiki/LEB128
+# MSB ------------------ LSB
+#       01100111100010011011  In raw two's complement binary
+#      101100111100010011011  Sign extended to a multiple of 7 bits
+#  1011001  1110001  0011011  Split into 7-bit groups
+# 01011001 11110001 10011011  Add high 1 bits on all but last (most significant) group to form bytes
+#     0x59     0xF1     0x9B  In hexadecimal
+# → 0x9B 0xF1 0x59            Output stream (LSB to MSB)
+function sleb128encode(value::Int64, padTo=0)
+  val = value
+  result = UInt8[]
+  count = 0
+  more = true
+  while more
+    byte = UInt8(val & 0x7f)
+    val >>= 7
+    more = !((((val == 0 ) && ((byte & 0x40) == 0)) || ((val == -1) && ((byte & 0x40) != 0))))
+    count += 1
+    if more || count < padTo
+      byte |= 0x80 # mark this byte that more bytes will follow
+    end
+    push!(result, byte)
+  end
+  # Pad out the rest of the bytes if we have to
+  if count < padTo
+    padValue = UInt8(val < 0 ? 0x7f : 0x00)
+    while count >= padTo - 1
+      push!(result, (padValue | 0x80))
+      count += 1
+    end
+    #TODO: May need to emit a null byte as a terminator
+  end
+  result
 end
