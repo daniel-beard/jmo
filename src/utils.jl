@@ -103,7 +103,7 @@ end
 
 # Reads a \0 delimited cstring starting at an index.
 # Does not modify IOStreams position
-function read_cstring(startIndex::UInt32, f::IOStream)
+function read_cstring(startIndex::Union{UInt32, Int64}, f::IOStream)
   existing_index = position(f)
   seek(f, startIndex)
   accum = UInt8[]
@@ -113,6 +113,126 @@ function read_cstring(startIndex::UInt32, f::IOStream)
   seek(f, existing_index)
   return String(accum)
 end
+
+#====================================================================#
+# Encodings
+#====================================================================#
+
+# https://en.wikipedia.org/wiki/LEB128
+# MSB ------------------ LSB
+#       10011000011101100101  In raw binary
+#      010011000011101100101  Padded to a multiple of 7 bits
+#  0100110  0001110  1100101  Split into 7-bit groups
+# 00100110 10001110 11100101  Add high 1 bits on all but last (most significant) group to form bytes
+#     0x26     0x8E     0xE5  In hexadecimal
+# → 0xE5 0x8E 0x26            Output stream (LSB to MSB)
+function uleb128encode(value::UInt64; padTo=0)
+  val = value
+  result = UInt8[]
+  while val != 0
+    byte = UInt8(val & 0x7f)
+    val >>= 7
+    if val != 0 || padTo != 0
+      byte |= 0x80 # mark this byte that more bytes will follow.
+    end
+    push!(result, byte)
+  end
+  result
+end
+
+# https://en.wikipedia.org/wiki/LEB128
+# MSB ------------------ LSB
+#       01100111100010011011  In raw two's complement binary
+#      101100111100010011011  Sign extended to a multiple of 7 bits
+#  1011001  1110001  0011011  Split into 7-bit groups
+# 01011001 11110001 10011011  Add high 1 bits on all but last (most significant) group to form bytes
+#     0x59     0xF1     0x9B  In hexadecimal
+# → 0x9B 0xF1 0x59            Output stream (LSB to MSB)
+function sleb128encode(value::Int64, padTo=0)
+  val = value
+  result = UInt8[]
+  count = 0
+  more = true
+  while more
+    byte = UInt8(val & 0x7f)
+    val >>= 7
+    more = !((((val == 0 ) && ((byte & 0x40) == 0)) || ((val == -1) && ((byte & 0x40) != 0))))
+    count += 1
+    if more || count < padTo
+      byte |= 0x80 # mark this byte that more bytes will follow
+    end
+    push!(result, byte)
+  end
+  # Pad out the rest of the bytes if we have to
+  if count < padTo
+    padValue = UInt8(val < 0 ? 0x7f : 0x00)
+    while count >= padTo - 1
+      push!(result, (padValue | 0x80))
+      count += 1
+    end
+    #TODO: May need to emit a null byte as a terminator
+  end
+  result
+end
+
+
+function decodeULEB128(input::Array{UInt8,1}, dtype::DataType=UInt64, outsize::Integer=0)
+  if outsize == 0
+    outsize = length(input)
+  end
+  output = Array{dtype}(undef, outsize)
+  j,k = 1,1
+  while k <= length(output)
+    output[k], shift = 0, 0
+    while true
+        byte = input[j]
+        j += 1
+        output[k] |= (dtype(byte & 0x7F) << shift)
+        if (byte & 0x80 == 0) 
+          break
+        end
+        shift += 7
+    end
+    k += 1
+    if j > length(input) break end
+  end
+  output[1:k-1]
+end
+
+function decodeULEB128(f::IOStream)
+  result = 0
+  shift = 0
+  while true
+    byte = read(f, UInt8)
+    result |= (UInt64(byte & 0x7F) << shift)
+    if (byte & 0x80 == 0)
+      break
+    end
+    shift += 7
+  end
+  result
+end
+
+function decodeSLEB128(input::Array{UInt8, 1})
+  value, shift = 0, 0
+  byte::UInt8 = 0xFF
+  i = 1
+  while byte >= 128
+    byte = input[i]
+    value |= Int64(byte & 0x7f) << shift
+    shift += 7
+    i += 1
+  end
+  # sign extend negative numbers
+  if byte & 0x40 != 0
+    value |= (-1) << shift
+  end
+  value
+end
+
+#====================================================================#
+# Markdown
+#====================================================================#
 
 # Outputs a markdown table
 # Param is an array of alternating titles + values, e.g.
@@ -131,8 +251,9 @@ function printmdtable(titlesAndValues::Array{Any})
   println(Markdown.rst(table))
 end
 
-# Pretty print implementations
-####################################
+#====================================================================#
+# Pretty Print 
+#====================================================================#
 
 function pprint(header::Union{MachHeader, MachHeader64})
   type = isa(header, MachHeader) ? "MachHeader" : "MachHeader64"
