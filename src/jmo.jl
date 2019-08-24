@@ -7,11 +7,12 @@ include("utils.jl")
 include("read.jl")
 include("iterators.jl")
 include("disassemble.jl")
+include("dyld_info.jl")
 
 using ArgParse
 using Markdown
 
-const VERSION = "0.0.2"
+const VERSION = "0.0.3"
 
 # Tests that a file has the correct magic value, or detects if the file is a fat file.
 # Since we don't yet support fat files, print the summary and exit.
@@ -128,6 +129,25 @@ function opt_min_sdk(filename)
   end
 end
 
+function opt_binding_opcodes(filename)
+  f, offset, is_64, is_swap, header_meta = read_header(filename)
+  header = header_meta.first
+  offset += sizeof(header)
+  for i = 1:header.ncmds
+    load_cmd = read_generic(LoadCommand, f, offset, is_swap).first
+    if in(load_cmd.cmd, [LC_DYLD_INFO, LC_DYLD_INFO_ONLY])
+      d = read_generic(DyldInfoCommand, f, offset, is_swap).first
+      "Command size: $(d.cmdsize)" |> println
+      "RI offset: $(d.rebase_off)" |> println
+      "RI size: $(d.rebase_size)" |> println
+      "bind off: $(d.bind_off)" |> println
+      "bind size: $(d.bind_size)" |> println
+      read_bind_opcodes(f, d.bind_off, d.bind_size, is_64)
+    end
+    offset += load_cmd.cmdsize
+  end
+end
+
 function parse_cli_opts(args) 
   s = ArgParseSettings(description = "MachO object file viewer", version = VERSION, add_version = true, add_help = false)
 
@@ -152,6 +172,9 @@ function parse_cli_opts(args)
         action = :store_true
       "--uuid"
         help = "Print the 128-bit UUID for an image or its corresponding dSYM file."
+        action = :store_true
+      "--binding-opcodes"
+        help = "Shows binding info op codes"
         action = :store_true
       "--help"
         help = "Show help"
@@ -184,6 +207,8 @@ function parse_cli_opts(args)
     opt_uuid(filename)
   elseif arg_dict["min-sdk"] == true
     opt_min_sdk(filename)
+  elseif arg_dict["binding-opcodes"] == true
+    opt_binding_opcodes(filename)
   end
 end
 
