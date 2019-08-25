@@ -9,6 +9,18 @@ function read_magic(f::IOStream)
   read(f, UInt32)
 end
 
+function is_magic_fat(magic::UInt32)
+  magic == FAT_MAGIC || magic == FAT_CIGAM
+end
+
+function is_magic_64(magic::UInt32)
+  magic == MH_MAGIC_64 || magic == MH_CIGAM_64
+end
+
+function should_swap_bytes(magic::UInt32)
+  magic == MH_CIGAM || magic == MH_CIGAM_64
+end
+
 # Generic read function, returns a Pair containing the type T and a meta struct that contains some 
 # meta info like offset and IOStream
 function read_generic(T, f::IOStream, offset::Int64, is_swap::Bool; first_field_flip = true)::Pair{T, MetaStruct}
@@ -165,3 +177,5 @@ function read_segment_commands(f::IOStream, load_commands_offset::Int64, ncmds::
     actual_offset += load_cmd.cmdsize
   end
 end
+
+
