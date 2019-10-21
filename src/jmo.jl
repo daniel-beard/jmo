@@ -8,6 +8,7 @@ include("read.jl")
 include("iterators.jl")
 include("disassemble.jl")
 include("dyld_info.jl")
+include("printing.jl")
 
 using ArgParse
 using Markdown
@@ -133,19 +134,52 @@ function opt_binding_opcodes(filename)
   f, offset, is_64, is_swap, header_meta = read_header(filename)
   header = header_meta.first
   offset += sizeof(header)
+  orig_offset = offset
+  offset = orig_offset
+  
+  # Get shared libs
+  dylibs = Pair{DylibCommand, MetaStruct}[]
+  for i = 1:header.ncmds
+    load_cmd = read_generic(LoadCommand, f, offset, is_swap).first
+    if load_cmd.cmd == LC_LOAD_DYLIB
+      dylib = read_generic(DylibCommand, f, offset, is_swap)
+      push!(dylibs, dylib)
+    end
+    offset += load_cmd.cmdsize
+  end
+  
+  # Get segments
+  offset = orig_offset
+  segments = SegmentCommand64[]
+  for segment_pair in SegmentIterator(header_meta, is_64, is_swap)
+    segment = segment_pair.first
+    push!(segments, segment)
+  end
+  
+  # Read binding opcodes
+  offset = orig_offset
+  binding_info = Nothing
+  lazy_binding_info = Nothing
   for i = 1:header.ncmds
     load_cmd = read_generic(LoadCommand, f, offset, is_swap).first
     if in(load_cmd.cmd, [LC_DYLD_INFO, LC_DYLD_INFO_ONLY])
       d = read_generic(DyldInfoCommand, f, offset, is_swap).first
-      "Command size: $(d.cmdsize)" |> println
-      "RI offset: $(d.rebase_off)" |> println
-      "RI size: $(d.rebase_size)" |> println
-      "bind off: $(d.bind_off)" |> println
-      "bind size: $(d.bind_size)" |> println
-      read_bind_opcodes(f, d.bind_off, d.bind_size, is_64)
+      @printf("Binding info 0x%08x - 0x%08x\n", d.bind_off, d.bind_off + d.bind_size)
+      binding_info = read_bind_opcodes(f, d.bind_off, d.bind_size, is_64, print_op_codes = true)
+      println()
+      #TODO: Add weak binding opcodes here as well
+      @printf("Lazy binding info 0x%08x - 0x%08x\n", d.lazy_bind_off, d.lazy_bind_off + d.lazy_bind_size)
+      lazy_binding_info = read_bind_opcodes(f, d.lazy_bind_off, d.lazy_bind_size, is_64, print_op_codes = true)
+      println()
     end
     offset += load_cmd.cmdsize
   end
+  
+  # Pretty print records
+  "Binding Records" |> println
+  pprint(dylibs, segments, binding_info)
+  "Lazy Binding Records" |> println
+  pprint(dylibs, segments, lazy_binding_info, is_lazy = true)
 end
 
 function parse_cli_opts(args) 

@@ -489,6 +489,7 @@ const BIND_SPECIAL_DYLIB_FLAT_LOOKUP      = -2
 
 const BIND_SYMBOL_FLAGS_WEAK_IMPORT           = 0x1
 const BIND_SYMBOL_FLAGS_NON_WEAK_DEFINITION   = 0x8
+bind_symbol_flags = @dict[BIND_SYMBOL_FLAGS_WEAK_IMPORT, BIND_SYMBOL_FLAGS_NON_WEAK_DEFINITION]
 
 const BIND_OPCODE_MASK                              = 0xF0
 const BIND_IMMEDIATE_MASK                           = 0x0F

@@ -202,3 +202,17 @@ struct DyldInfoCommand
   export_size::UInt32     # size of lazy binding info
 end
 
+#TODO: Not sure sizes here, re-address
+# seg_index: 0 seg_offset: 0x0 lib_ordinal: 0 type: 0 flags: 0 special_dylib: 1
+struct BindRecord
+  seg_index::Int64
+  seg_offset::UInt64
+  lib_ordinal::Int64
+  addend::Int64
+  type::Int64
+  flags::Int64
+  symbol_name::String
+  
+  BindRecord() = new(0,0,0,0,0,0, "")
+  BindRecord(seg_index, seg_offset, lib_ordinal, addend, type, flags, symbol_name) = new(seg_index, seg_offset, lib_ordinal, addend, type, flags, symbol_name)
+end
