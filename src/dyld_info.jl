@@ -1,26 +1,13 @@
 
 include("utils.jl")
 include("read.jl")
+include("types.jl")
+
+using Printf
 
 #====================================================================#
 # Functions for operating on dyld info of an image.
 #====================================================================#
-# 
-
-#TODO: Not sure sizes here, re-address
-# seg_index: 0 seg_offset: 0x0 lib_ordinal: 0 type: 0 flags: 0 special_dylib: 1
-struct BindRecord
-  seg_index::Int64
-  seg_offset::UInt64
-  lib_ordinal::Int64
-  addend::Int64
-  type::Int64
-  flags::Int64
-  symbol_name::String
-  
-  BindRecord() = new(0,0,0,0,0,0, "")
-  BindRecord(seg_index, seg_offset, lib_ordinal, addend, type, flags, symbol_name) = new(seg_index, seg_offset, lib_ordinal, addend, type, flags, symbol_name)
-end
 
 #TODO: Replace with proper lens lib if this gets too painful
 withSegIndex(b::BindRecord, s::Int64) = BindRecord(s, b.seg_offset, b.lib_ordinal, b.addend, b.type, b.flags, b.symbol_name)
@@ -36,7 +23,7 @@ withSymbolName(b::BindRecord, s::String) = BindRecord(b.seg_index, b.seg_offset,
 #====================================================================#
 
 #TODO: Figure out correct sizes, and remove the casts in this func.
-function read_bind_opcodes(f::IOStream, start, length, is_64::Bool)
+function read_bind_opcodes(f::IOStream, start, length, is_64::Bool; print_op_codes = false)
   seek(f, start)
   endval = start + length
   ptr_size = is_64 ? 8 : 4
@@ -47,93 +34,86 @@ function read_bind_opcodes(f::IOStream, start, length, is_64::Bool)
     record = BindRecord()
     
     # Build the record here
-    while true
+    while true && position(f) < endval
       curr_byte  = read(f, UInt8)
       curr_opcode = curr_byte & BIND_OPCODE_MASK
-      
-      println("Curr byte: $(curr_byte), opcode: $(bind_opcodes[curr_opcode])")
-      
+      rel_offset = @sprintf("0x%04x", position(f) - start)
+      opcode_name = bind_opcodes[curr_opcode]
+
       if curr_opcode == BIND_OPCODE_SET_DYLIB_ORDINAL_IMM
         val = curr_byte & BIND_IMMEDIATE_MASK
         record = withLibOrdinal(record, Int64(val))
-        println(val)
+        print_op_codes && @printf("%s %s(%ld)\n", rel_offset, opcode_name, val)
       elseif curr_opcode == BIND_OPCODE_SET_DYLIB_ORDINAL_ULEB
         val = decodeULEB128(f)
         record = withLibOrdinal(record, Int64(val))
-        println(val)
+        print_op_codes && @printf("%s %s(%ld)\n", rel_offset, opcode_name, val)
       elseif curr_opcode == BIND_OPCODE_SET_DYLIB_SPECIAL_IMM
         immediate = curr_byte & BIND_IMMEDIATE_MASK
         record = withLibOrdinal(record, Int64(immediate))
-        println(immediate)
+        print_op_codes && @printf("%s %s(%ld)\n", rel_offset, opcode_name, immediate)
       elseif curr_opcode == BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM
         symbol = read_cstring(position(f), f)
-        println(symbol)
+        immediate = curr_byte & BIND_IMMEDIATE_MASK
+        bind_flag = get(bind_symbol_flags, immediate, 0)
         offset = position(f) + sizeof(symbol) + 1
         seek(f, offset)
         record = withSymbolName(record, symbol)
+        print_op_codes && @printf("%s %s(0x%02x, %s)\n", rel_offset, opcode_name, bind_flag, symbol)
       elseif curr_opcode == BIND_OPCODE_SET_TYPE_IMM
         val = curr_byte & BIND_IMMEDIATE_MASK
-        println(val)
         record = withType(record, Int64(val))
+        print_op_codes && @printf("%s %s(%ld)\n", rel_offset, opcode_name, val)
       elseif curr_opcode == BIND_OPCODE_SET_ADDEND_SLEB
         val = decodeSLEB128(f)
         record = withAddend(record, val)
+        print_op_codes && @printf("%s %s(%ld)\n", rel_offset, opcode_name, val)
       elseif curr_opcode == BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB
-        
         seg_index = curr_byte & BIND_IMMEDIATE_MASK
         seg_offset = decodeULEB128(f)
-        println("Seg index: $seg_index, seg_offset: $seg_offset")
         record = withSegIndex(record, Int64(seg_index))
         record = withSegOffset(record, seg_offset)
-        
+        print_op_codes && @printf("%s %s(0x%02x, 0x%08x)\n", rel_offset, opcode_name, seg_index, seg_offset)
       elseif curr_opcode == BIND_OPCODE_ADD_ADDR_ULEB
-        
+        #TODO: Output here is not correct.
+        # Got 0xffffffffffffffc8 expected 0xFFFFFFC8)
         val = decodeULEB128(f)
         record = withSegOffset(record, record.seg_offset + val)
-        @printf("0x%0x\n", val)
-        
+        print_op_codes && @printf("%s %s(0x%04x)\n", rel_offset, opcode_name, val)
       elseif curr_opcode == BIND_OPCODE_DO_BIND
         push!(bind_stack, record)
         # jump by platform pointer size, 32, or 64 bits
         record = withSegOffset(record, record.seg_offset + ptr_size)
-        
+        print_op_codes && @printf("%s %s()\n", rel_offset, opcode_name)
       elseif curr_opcode == BIND_OPCODE_DO_BIND_ADD_ADDR_ULEB
-        
         push!(bind_stack, record)
         offset = decodeULEB128(f)
         seg_offset = record.seg_offset + offset
-        
-      #TODO: Should be correct now, but double check when you are removing the comments
-      # or wrapping them in a verbose switch.
+        print_op_codes && @printf("%s %s(0x%08x)\n", rel_offset, opcode_name, offset)
       elseif curr_opcode == BIND_OPCODE_DO_BIND_ADD_ADDR_IMM_SCALED
-        
         push!(bind_stack, record)
         immediate = curr_byte & BIND_IMMEDIATE_MASK
         offset = (immediate * ptr_size + ptr_size)
         seg_offset = record.seg_offset + offset
-        @printf("ptrsize: %d 0x%x\n", ptr_size, ptr_size)
-        @printf("immediate: 0x%x offset: 0x%x segoffset: 0x%x\n", immediate, offset, seg_offset)
-        seg_offset |> println
         record = withSegOffset(record, seg_offset)
-        
+        print_op_codes && @printf("%s %s(0x%08x)\n", rel_offset, opcode_name, offset)
       elseif curr_opcode == BIND_OPCODE_DO_BIND_ULEB_TIMES_SKIPPING_ULEB
-        
         count = decodeULEB128(f)
         skip = decodeULEB128(f)
-        
-        @printf("count: %d skip: %d 0x%x\n", count, skip, skip)
+        print_op_codes && @printf("%s %s(%ld, 0x%08x)\n", rel_offset, opcode_name, count, skip)
         
         for i = 1:count
           push!(bind_stack, record)
           seg_offset = record.seg_offset + ptr_size + skip
           record = withSegOffset(record, seg_offset)
-          println("binding record")
         end
 
       elseif curr_opcode == BIND_OPCODE_DONE
-        break
+        continue
+      else
+        assert(false, "Unknown opcode! $(curr_opcode)")
       end
     end
-    return
+    return bind_stack
   end
 end
