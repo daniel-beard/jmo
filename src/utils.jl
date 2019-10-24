@@ -44,7 +44,12 @@ end
 
 # Returns a string description of the CPU architecture, from a mach header or fat arch header.
 function header_cpu_type_desc(header::Union{MachHeader, MachHeader64, FatArch})
-  cpu_types[header.cputype]
+  get(cpu_types, header.cputype, "unknown")
+end
+
+# Returns pretty string description of CPU architecture, from a value
+function pretty_header_cpu_type_desc(val::UInt32)
+  get(pretty_cpu_types, val, "unknown")
 end
 
 # Returns a string description of the CPU subtype, from a mach header

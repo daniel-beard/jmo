@@ -4,8 +4,8 @@
 include("types.jl")
 include("constants.jl")
 
-function read_magic(f::IOStream)
-  seekstart(f)
+function read_magic(f::IOStream, offset = 0)
+  seek(f, offset)
   read(f, UInt32)
 end
 
@@ -40,14 +40,14 @@ function read_generic(T, f::IOStream, offset::Int64, is_swap::Bool; first_field_
 end
 
 # Reads a header, returning an IOStream, offset, is_64, is_swap, and a header meta pair.
-function read_header(filename)
+function read_header(filename, offset)
   f = open(filename)
-  offset = 0
-  magic = read_magic(f)  
+  seek(f, offset)
+  magic = read_magic(f, offset)
   is_64 = is_magic_64(magic)
   is_swap = should_swap_bytes(magic)
   header_type = is_64 ? MachHeader64 : MachHeader
-  header = read_generic(header_type, f, offset, is_swap, first_field_flip = false)
+  header = read_generic(header_type, f, Int64(offset), is_swap, first_field_flip = false)
   return f, offset, is_64, is_swap, header
 end
 
@@ -79,30 +79,6 @@ function read_fat_header(f::IOStream, offset::Int64, magic::UInt32)
     push!(result, T(fields...))
   end
   result
-end
-
-# TODO turn this into an iterator that yields sections instead
-function read_section_named(section_name::String, filename::String)::Union{Section, Section64, Nothing}
-  f, offset, is_64, is_swap, header = read_header(filename).first
-  offset += sizeof(header)
-  for i = 1:header.ncmds
-    load_cmd = read_generic(LoadCommand, f, offset, is_swap).first
-    lcSeg = is_64 ? LC_SEGMENT_64 : LC_SEGMENT
-    if load_cmd.cmd == lcSeg
-      T = (lcSeg == LC_SEGMENT) ? SegmentCommand : SegmentCommand64
-      segment_command = read_generic(T, f, offset, is_swap).first
-      # Read sections for this segment
-      current_section_offset = offset + sizeof(segment_command)
-      for sect = 1:segment_command.nsects
-        section = read_generic(Section64, f, current_section_offset, is_swap).first
-        if occursin(section_name, String(section.sectname))
-          return section
-        end
-        current_section_offset += sizeof(section)
-      end
-    end
-    offset += load_cmd.cmdsize
-  end
 end
 
 #TODO: Eventually remove this method after implementing everything that used to be in here...

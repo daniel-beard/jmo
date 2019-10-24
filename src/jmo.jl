@@ -21,30 +21,64 @@ function check_file_is_valid(filename)
   f = open(filename)
   offset = 0
   magic = read_magic(f)
-  # Handle fat files and exit
-  if is_magic_fat(magic)
-    fat_headers = read_fat_header(f, 0, magic)
-    map(x->pprint(x), fat_headers)
-    println("jmo doesn't currently support FAT files, to use with this utility, extract a slice using `lipo`")
-    exit(1)
-  end
   # Check non machO file
-  if in(magic, [MH_MAGIC, MH_MAGIC_64, MH_CIGAM, MH_CIGAM_64]) == false 
+  if in(magic, [MH_MAGIC, MH_MAGIC_64, MH_CIGAM, MH_CIGAM_64, FAT_MAGIC, FAT_CIGAM]) == false 
     println("This is not a valid machO file! Aborting!")
     exit(2)
   end
   close(f)
 end
 
+# This method either returns an offset to apply to the file for loading the thin header, 
+# or exits the program.
+function handle_fat_file(filename, args::Dict{String, Any})
+  f = open(filename)
+  offset = 0
+  magic = read_magic(f)
+  
+  # Handle fat files and exit
+  if is_magic_fat(magic)
+    fat_headers = read_fat_header(f, 0, magic)
+    archs =  map(h -> pretty_header_cpu_type_desc(h.cputype), filter(h-> typeof(h) == FatArch, fat_headers))
+    arch_arg = get(args, "arch", Nothing)
+    archs_arg = get(args, "archs", Nothing)
+
+    # Have -archs option, print the archs and exit
+    if archs_arg == true
+      println(archs)
+      exit(0)
+    end
+    
+    # No -arch option
+    if arch_arg == Nothing
+      println("To use jmo with fat files, please use the -arch option and choose from the following:")
+      println(archs)
+      exit(1)
+    end
+    
+    cpu_type_from_arch = filter(f -> f.second == arch_arg, pretty_cpu_types) |> keys |> first
+    if isempty(cpu_type_from_arch)
+      println("Could not find matching architecture, please choose from the following:")
+      println(archs)
+      exit(1)
+    end
+    
+    fat_arch_header = filter(h -> typeof(h) == FatArch && h.cputype == cpu_type_from_arch, fat_headers)
+    magic_offset_for_arch = first(fat_arch_header).offset
+    return magic_offset_for_arch
+  end
+  return 0
+end
+
 # -h option, print out the file header
-function opt_read_header(filename)
-  f, offset, is_64, is_swap, header_pair = read_header(filename)
+function opt_read_header(filename, arch_offset)
+  f, offset, is_64, is_swap, header_pair = read_header(filename, arch_offset)
   pprint(header_pair.first)
 end
 
 # --ls option, print out the names of all Load Cmds.
-function opt_load_cmd_ls(filename)
-  f, offset, is_64, is_swap, header_pair = read_header(filename)
+function opt_load_cmd_ls(filename, arch_offset)
+  f, offset, is_64, is_swap, header_pair = read_header(filename, arch_offset)
   header = header_pair.first
   offset += sizeof(header)
   commands = LoadCommand[]
@@ -58,8 +92,8 @@ function opt_load_cmd_ls(filename)
 end
 
 # -L option, print out the dylibs that this object file uses
-function opt_shared_libs(filename)
-  f, offset, is_64, is_swap, header_pair = read_header(filename)
+function opt_shared_libs(filename, arch_offset)
+  f, offset, is_64, is_swap, header_pair = read_header(filename, arch_offset)
   header = header_pair.first
   offset += sizeof(header)
   for i = 1:header.ncmds
@@ -72,8 +106,8 @@ function opt_shared_libs(filename)
   end
 end
 
-function opt_objc_classnames(filename)
-  f, offset, is_64, is_swap, header_meta = read_header(filename)
+function opt_objc_classnames(filename, arch_offset)
+  f, offset, is_64, is_swap, header_meta = read_header(filename, arch_offset)
   for segment_pair in SegmentIterator(header_meta, is_64, is_swap)
     segment = segment_pair.first
     segname_string = String(segment.segname)
@@ -88,8 +122,8 @@ function opt_objc_classnames(filename)
   end
 end
 
-function opt_disassemble(filename)
-  f, offset, is_64, is_swap, header_meta = read_header(filename)
+function opt_disassemble(filename, arch_offset)
+  f, offset, is_64, is_swap, header_meta = read_header(filename, arch_offset)
   for segment_pair in SegmentIterator(header_meta, is_64, is_swap)
     segment = segment_pair.first
     for section_pair in SectionIterator(segment_pair, is_64, is_swap)
@@ -102,8 +136,8 @@ function opt_disassemble(filename)
   end
 end
 
-function opt_uuid(filename)
-  f, offset, is_64, is_swap, header_meta = read_header(filename)
+function opt_uuid(filename, arch_offset)
+  f, offset, is_64, is_swap, header_meta = read_header(filename, arch_offset)
   header = header_meta.first
   offset += sizeof(header)
   for i = 1:header.ncmds
@@ -117,8 +151,8 @@ function opt_uuid(filename)
   end
 end
 
-function opt_min_sdk(filename)
-  f, offset, is_64, is_swap, header_meta = read_header(filename)
+function opt_min_sdk(filename, arch_offset)
+  f, offset, is_64, is_swap, header_meta = read_header(filename, arch_offset)
   header = header_meta.first
   offset += sizeof(header)
   for i = 1:header.ncmds
@@ -130,8 +164,8 @@ function opt_min_sdk(filename)
   end
 end
 
-function opt_binding_opcodes(filename)
-  f, offset, is_64, is_swap, header_meta = read_header(filename)
+function opt_binding_opcodes(filename, arch_offset)
+  f, offset, is_64, is_swap, header_meta = read_header(filename, arch_offset)
   header = header_meta.first
   offset += sizeof(header)
   orig_offset = offset
@@ -147,7 +181,7 @@ function opt_binding_opcodes(filename)
     end
     offset += load_cmd.cmdsize
   end
-  
+
   # Get segments
   offset = orig_offset
   segments = SegmentCommand64[]
@@ -155,7 +189,7 @@ function opt_binding_opcodes(filename)
     segment = segment_pair.first
     push!(segments, segment)
   end
-  
+
   # Read binding opcodes
   offset = orig_offset
   binding_info = Nothing
@@ -177,9 +211,17 @@ function opt_binding_opcodes(filename)
   
   # Pretty print records
   "Binding Records" |> println
-  pprint(dylibs, segments, binding_info)
+  if binding_info != Nothing
+    pprint(dylibs, segments, binding_info)
+  else
+    println("No binding info")
+  end
   "Lazy Binding Records" |> println
-  pprint(dylibs, segments, lazy_binding_info, is_lazy = true)
+  if lazy_binding_info != Nothing
+    pprint(dylibs, segments, lazy_binding_info, is_lazy = true)
+  else
+    println("No lazy binding info")
+  end
 end
 
 function parse_cli_opts(args) 
@@ -189,6 +231,13 @@ function parse_cli_opts(args)
       "--header", "-h"
         action = :store_true
         help = "display header"
+      "--arch", "-a"
+        action = :store_arg
+        arg_type = String
+        help = "select an architecture for fat files"
+      "--archs"
+        action = :store_true
+        help = "print architectures"
       "--ls", "-c"
         help = "show load commands summary"
         action = :store_true
@@ -226,23 +275,26 @@ function parse_cli_opts(args)
   # Check that this is a file we can read
   check_file_is_valid(filename)
   
+  # Check if we need to offset to a different slice.
+  arch_offset = handle_fat_file(filename, arg_dict)
+  
   # Handle args
   if arg_dict["header"] == true 
-    opt_read_header(filename)
+    opt_read_header(filename, arch_offset)
   elseif arg_dict["ls"] == true
-    opt_load_cmd_ls(filename)
+    opt_load_cmd_ls(filename, arch_offset)
   elseif arg_dict["shared-libs"] == true
-    opt_shared_libs(filename)
+    opt_shared_libs(filename, arch_offset)
   elseif arg_dict["objc-classes"] == true
-    opt_objc_classnames(filename)
+    opt_objc_classnames(filename, arch_offset)
   elseif arg_dict["disassemble"] == true
-    opt_disassemble(filename)
+    opt_disassemble(filename, arch_offset)
   elseif arg_dict["uuid"] == true
-    opt_uuid(filename)
+    opt_uuid(filename, arch_offset)
   elseif arg_dict["min-sdk"] == true
-    opt_min_sdk(filename)
+    opt_min_sdk(filename, arch_offset)
   elseif arg_dict["binding-opcodes"] == true
-    opt_binding_opcodes(filename)
+    opt_binding_opcodes(filename, arch_offset)
   end
 end
 
