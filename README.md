@@ -7,9 +7,10 @@ I'm adding new commands as I require them.
 ## Usage
 
 ```
-$ julia src/jmo.jl --help
-usage: jmo.jl [-h] [-c] [-L] [--objc-classes] [--disassemble]
-              [--min-sdk] [--uuid] [--help] [--version] file
+$ julia src/jmo.jl --help                             
+usage: jmo.jl [-h] [-a ARCH] [--archs] [-c] [-L] [--objc-classes]
+              [--disassemble] [--min-sdk] [--uuid] [--binding-opcodes]
+              [--help] [--version] file
 
 MachO object file viewer
 
@@ -18,6 +19,8 @@ positional arguments:
 
 optional arguments:
   -h, --header       display header
+  -a, --arch ARCH    select an architecture for fat files
+  --archs            print architectures
   -c, --ls           show load commands summary
   -L, --shared-libs  show names and version numbers of the shared
                      libraries that the object file uses.
@@ -28,9 +31,9 @@ optional arguments:
                      compiled for
   --uuid             Print the 128-bit UUID for an image or its
                      corresponding dSYM file.
+  --binding-opcodes  Shows binding info op codes
   --help             Show help
   --version          show version information and exit
-
 ```
 
 ## Usage Examples
