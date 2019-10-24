@@ -172,14 +172,7 @@ sdk: 10.14.0
 '--binding-opcodes example'
 
 ```
-$ julia src/jmo.jl --opcodes ~/ObjcThin
-unrecognized option --opcodes
-usage: jmo.jl [-h] [-a ARCH] [--archs] [-c] [-L] [--objc-classes]
-              [--disassemble] [--min-sdk] [--uuid] [--binding-opcodes]
-              [--help] file
-
-~/Dev/Personal/jmo on  dbeard_add_archs_support! ⌚ 11:00:29
-$ j src/jmo.jl --binding-opcodes ~/ObjcThin
+$ julia src/jmo.jl --binding-opcodes ~/ObjcThin
 Binding info 0x00002018 - 0x000020e0
 0x0001 BIND_OPCODE_SET_DYLIB_ORDINAL_IMM(2)
 0x0002 BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM(0x00, _OBJC_CLASS_$_NSObject)
