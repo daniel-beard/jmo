@@ -1,5 +1,5 @@
 
-module JMO 
+module JMO
 
 include("constants.jl")
 include("types.jl")
@@ -48,9 +48,9 @@ function handle_fat_file(filename, args::Dict{String, Any})
       println(archs)
       exit(0)
     end
-    
+
     # No -arch option
-    if arch_arg == Nothing
+    if arch_arg == nothing
       println("To use jmo with fat files, please use the -arch option and choose from the following:")
       println(archs)
       exit(1)
@@ -227,7 +227,7 @@ end
 function parse_cli_opts(args) 
   s = ArgParseSettings(description = "MachO object file viewer", version = VERSION, add_version = true, add_help = false)
 
-  @add_arg_table s begin
+  @add_arg_table! s begin
       "--header", "-h"
         action = :store_true
         help = "display header"
@@ -268,16 +268,13 @@ function parse_cli_opts(args)
   end
   arg_dict = parse_args(s) # the result is a Dict{String,Any}
   filename = arg_dict["file"]
-  
-  # TODO: Could in future have a 'read_headers' method here as part of setup
-  # Then each opt_* method can map over the headers passed to it, or we could filter by an -arch option.
-  
+
   # Check that this is a file we can read
   check_file_is_valid(filename)
-  
+
   # Check if we need to offset to a different slice.
   arch_offset = handle_fat_file(filename, arg_dict)
-  
+
   # Handle args
   if arg_dict["header"] == true 
     opt_read_header(filename, arch_offset)
